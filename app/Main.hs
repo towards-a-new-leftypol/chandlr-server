@@ -5,7 +5,7 @@ import           Data.Proxy
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp             as Wai
 import qualified Network.Wai.Middleware.RequestLogger as Wai
-import qualified Servant
+import Servant.API
 
 import qualified Common.FrontEnd.Routes as FE
 import qualified Common.FrontEnd.Action as FE

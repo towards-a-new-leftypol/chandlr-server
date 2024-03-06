@@ -69,6 +69,25 @@ executable chandlr-server
                     Common.Network.CatalogPostType
                     Common.Network.ClientTypes
                     Common.Network.HttpTypes
+                    Common.AttachmentType
+                    Common.Component.BodyRender
+                    Common.Component.CatalogGrid
+                    Common.Component.Thread.Embed
+                    Common.Component.Thread.Files
+                    Common.Component.Thread.Intro
+                    Common.Component.Thread.Model
+                    Common.Component.ThreadView
+                    Common.Component.TimeControl
+                    Common.Network.BoardType
+                    Common.Network.PostType
+                    Common.Network.SiteType
+                    Common.Network.ThreadType
+                    Common.Network.Units
+                    Common.Parsing.EmbedParser
+                    Common.Parsing.PostBodyUtils
+                    Common.Parsing.PostPartType
+                    Common.Parsing.QuoteLinkParser
+                    Parsing.BodyParser
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -84,7 +103,8 @@ executable chandlr-server
                       miso,
                       parsec,
                       filepath,
-                      containers
+                      containers,
+                      servant
 
     -- Directories containing source files.
     hs-source-dirs:   app
