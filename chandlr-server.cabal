@@ -81,7 +81,10 @@ executable chandlr-server
                       text,
                       time,
                       aeson,
-                      miso
+                      miso,
+                      parsec,
+                      filepath,
+                      containers
 
     -- Directories containing source files.
     hs-source-dirs:   app
