@@ -104,7 +104,9 @@ executable chandlr-server
                       parsec,
                       filepath,
                       containers,
-                      servant
+                      servant,
+                      servant-server,
+                      lucid
 
     -- Directories containing source files.
     hs-source-dirs:   app
