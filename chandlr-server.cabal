@@ -66,6 +66,7 @@ executable chandlr-server
                     Common.Component.Search.SearchTypes
                     Common.FrontEnd.Action
                     Common.FrontEnd.Routes
+                    Common.FrontEnd.Model
                     Common.Network.CatalogPostType
                     Common.Network.ClientTypes
                     Common.Network.HttpTypes
@@ -88,6 +89,8 @@ executable chandlr-server
                     Common.Parsing.PostPartType
                     Common.Parsing.QuoteLinkParser
                     Parsing.BodyParser
+                    DataClient
+                    Common.Server.JSONSettings
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -106,7 +109,12 @@ executable chandlr-server
                       containers,
                       servant,
                       servant-server,
-                      lucid
+                      lucid,
+                      safe-exceptions,
+                      bytestring,
+                      http-conduit,
+                      http-client,
+                      http-types
 
     -- Directories containing source files.
     hs-source-dirs:   app

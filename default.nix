@@ -1,7 +1,11 @@
 { nixpkgs ? import <nixpkgs> {} }:
 
 let
-  drv = nixpkgs.haskell.packages.ghc96.callCabal2nix "chandlr-server" ./. {};
+  http-conduit = import ./app/Common/nix-support/http-conduit.nix { inherit nixpkgs; };
+
+  drv = nixpkgs.haskellPackages.callCabal2nix "chandlr-server" ./. {
+    http-conduit = http-conduit.http-conduit;
+  };
 
   env = drv.env.overrideAttrs (oldAttrs: {
     buildInputs = oldAttrs.buildInputs ++ [

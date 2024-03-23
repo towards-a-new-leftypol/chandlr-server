@@ -19,11 +19,11 @@ import qualified Common.FrontEnd.Routes as FE
 import qualified Common.FrontEnd.Action as FE
 import qualified Common.FrontEnd.Model  as FE
 
-newtype HtmlPage a = HtmlPage a
+newtype HtmlPage a = HtmlPage (FE.Model, a)
 
 instance (L.ToHtml a) => L.ToHtml (HtmlPage a) where
     toHtmlRaw = L.toHtml
-    toHtml (HtmlPage x) = L.toHtml x
+    toHtml (HtmlPage (_, x)) = L.toHtml x
     -- toHtml (HtmlPage x) = do
     --     L.doctype_
     --     L.head_ $ do
@@ -47,32 +47,13 @@ catalogView :: Handler (HtmlPage (View FE.Action))
 catalogView = do
     liftIO $ putStrLn "Hello World"
 
-    pure $ HtmlPage $ h1_ [] [ text "Hello World" ]
-
-{-
-    return $ HtmlPage $ do
-        L.doctype_
-        L.head_ $ do
-          L.title_ "Chandlr"
-          L.meta_ [L.charset_ "utf-8"]
-
-          L.with (L.script_ mempty)
-            [ L.makeAttribute "src" "/static/all.js"
-            , L.makeAttribute "async" mempty
-            , L.makeAttribute "defer" mempty
-            ]
-
-        L.body_ (L.h1_ "Hello World")
--}
+    pure $ HtmlPage (undefined, h1_ [] [ text "Hello World" ])
 
 threadView :: Text -> Text -> FE.BoardThreadId -> Handler (HtmlPage (View FE.Action))
 threadView = undefined
 
 searchView :: Maybe Text -> Handler (HtmlPage (View FE.Action))
 searchView = undefined
-
-viewPage :: FE.Model -> View FE.Action
-viewPage = undefined
 
 app :: Wai.Application
 app = serve (Proxy @FrontEndRoutes) handlers
