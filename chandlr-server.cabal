@@ -84,6 +84,7 @@ executable chandlr-server
                     Common.Network.SiteType
                     Common.Network.ThreadType
                     Common.Network.Units
+                    Common.Network.HttpClient
                     Common.Parsing.EmbedParser
                     Common.Parsing.PostBodyUtils
                     Common.Parsing.PostPartType

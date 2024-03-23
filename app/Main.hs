@@ -12,7 +12,7 @@ import qualified Network.Wai.Middleware.RequestLogger as Wai
 import Servant.API
 import Servant.Server (Server, Handler (..), serve)
 import qualified Lucid      as L
-import qualified Lucid.Base as L
+-- import qualified Lucid.Base as L
 
 
 import qualified Common.FrontEnd.Routes as FE

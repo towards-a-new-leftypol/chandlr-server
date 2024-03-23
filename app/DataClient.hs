@@ -1,16 +1,23 @@
 module DataClient
-( fetchLatest
-)
-where
+    ( fetchLatest
+    )
+    where
 
-import Common.Network.ClientTypes (Model (..))
+import Data.Time.Clock (UTCTime)
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LC8
+
+import Common.Network.CatalogPostType (CatalogPost)
+import Common.Network.ClientTypes (Model (..), FetchCatalogArgs (..))
 import Common.Network.HttpClient
-( post
-, HttpError
-)
+    ( post
+    , HttpError (..)
+    )
+import Data.Aeson (eitherDecode, encode, FromJSON)
+import Common.Server.JSONSettings (JSONSettings)
 
-fetchLatest :: Model -> UTCTime -> IO IO (Either HttpError [ CatalogPost ])
-fetchLatest m t iface = do
+fetchLatest :: JSONSettings -> Model -> UTCTime -> IO (Either HttpError [ CatalogPost ])
+fetchLatest settings m t = do
     post settings "/rpc/fetch_catalog" payload False >>= return . eitherDecodeResponse
 
     where
@@ -18,3 +25,11 @@ fetchLatest m t iface = do
             { max_time = t
             , max_row_read = fetchCount m
             }
+
+
+eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
+eitherDecodeResponse (Left err) = Left err
+eitherDecodeResponse (Right bs) =
+    case eitherDecode bs of
+        Right val -> Right val
+        Left err -> Left $ StatusCodeError 500 $ LC8.pack $ "Failed to decode JSON: " ++ err ++ " " ++ (show bs)
