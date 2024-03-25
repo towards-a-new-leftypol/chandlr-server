@@ -1,0 +1,5 @@
+{ "postgrest_url": "http://localhost:3000",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiY2hhbl9hcmNoaXZlciJ9.rGIKZokTDKTuQLIv8138bUby5PELfDipYYIDpJzH02c",
+  "postgrest_fetch_count": 1000,
+  "media_root": "http://10.4.0.1:8888"
+}

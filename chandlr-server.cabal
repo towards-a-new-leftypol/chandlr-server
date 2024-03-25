@@ -92,6 +92,10 @@ executable chandlr-server
                     Parsing.BodyParser
                     DataClient
                     Common.Server.JSONSettings
+                    JSONSettings
+                    Common.Component.Search.View
+                    Common.FrontEnd.Interfaces
+                    Common.FrontEnd.Views
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -115,7 +119,10 @@ executable chandlr-server
                       bytestring,
                       http-conduit,
                       http-client,
-                      http-types
+                      http-types,
+                      cmdargs,
+                      mtl,
+                      utf8-string
 
     -- Directories containing source files.
     hs-source-dirs:   app

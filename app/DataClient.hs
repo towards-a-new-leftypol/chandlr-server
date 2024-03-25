@@ -26,7 +26,6 @@ fetchLatest settings m t = do
             , max_row_read = fetchCount m
             }
 
-
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
 eitherDecodeResponse (Right bs) =
