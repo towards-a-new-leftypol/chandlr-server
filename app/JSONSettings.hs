@@ -8,6 +8,8 @@ data JSONSettings = JSONSettings
     , jwt :: String
     , postgrest_fetch_count :: Int
     , media_root :: String
+    , static_serve_path :: String
+    , static_serve_url_root :: String
     } deriving (Show, Generic)
 
 instance FromJSON JSONSettings
