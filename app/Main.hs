@@ -7,6 +7,7 @@ module Main where
 import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
+import Data.Text.Lazy (toStrict)
 import Miso (ToServerRoutes, View)
 import Miso.String (toMisoString)
 import           Data.Proxy
@@ -28,7 +29,8 @@ import qualified Lucid.Base as L
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
-import Data.Aeson (decode)
+import Data.Aeson (decode, ToJSON)
+import Data.Aeson.Text (encodeToLazyText)
 import Data.Time.Clock (getCurrentTime)
 import Control.Monad.Except (throwError)
 import Data.Time.Clock (UTCTime)
@@ -46,11 +48,11 @@ import Common.Network.CatalogPostType (CatalogPost)
 import qualified Common.Component.CatalogGrid as Grid
 import qualified Common.Component.TimeControl as TC
 
-newtype HtmlPage a = HtmlPage (JSONSettings, a)
+data HtmlPage a = forall b. (ToJSON b) => HtmlPage (JSONSettings, b, a)
 
 instance (L.ToHtml a) => L.ToHtml (HtmlPage a) where
     toHtmlRaw = L.toHtml
-    toHtml (HtmlPage (settings, x)) = do
+    toHtml (HtmlPage (settings, initial_data, x)) = do
         L.doctype_
         L.head_ $ do
             L.meta_ [L.charset_ "utf-8"]
@@ -58,6 +60,7 @@ instance (L.ToHtml a) => L.ToHtml (HtmlPage a) where
             L.meta_ [L.name_ "postgrest-root", L.content_ (pack $ postgrest_url settings)]
             L.meta_ [L.name_ "postgrest-fetch-count", L.content_ (pack $ show $ postgrest_fetch_count settings)]
             L.meta_ [L.name_ "media-root", L.content_ (pack $ media_root settings)]
+            L.meta_ [L.name_ "initial-data", L.content_ (toStrict $ encodeToLazyText initial_data) ]
 
             L.title_ "Chandlr"
 
@@ -79,6 +82,18 @@ instance (L.ToHtml a) => L.ToHtml (HtmlPage a) where
             static_root = pack $ static_serve_url_root settings
 
 type FrontEndRoutes = ToServerRoutes FE.Route HtmlPage FE.Action
+{-
+    :Created By:
+      ___________                     _____    ______ 
+     /\________  \                   /\  __`\ /\_____\ 
+     \/_______//'/'         __   _ __\ \ \/\ \\/_____/ 
+             //'/'        /'__`\/\`'__\ \ \ \ \  
+            //'/'_______ /\  __/\ \ \/ \ \ \_\ \ 
+            /\___________\ \____\\ \_\  \ \_____\
+            \/___________/\/____/ \/_/   \/_____/             
+-}
+ 
+ 
 
 type StaticRoute = "static" :> Servant.Raw
 
@@ -120,7 +135,7 @@ catalogView settings = do
 
     where
         render :: UTCTime -> [ CatalogPost ] -> HtmlPage (View FE.Action)
-        render t posts = HtmlPage (settings, FE.catalogView model)
+        render t posts = HtmlPage (settings, posts, FE.catalogView model)
             where
                 model = FE.Model
                     { FE.grid_model = grid_model
@@ -141,10 +156,10 @@ catalogView settings = do
                 tc_model = TC.Model 0
 
 threadView :: Text -> Text -> FE.BoardThreadId -> Handler (HtmlPage (View FE.Action))
-threadView _ _ _ = throwError $ err404 { errBody = "404 - Not Found" }
+threadView _ _ _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
 searchView :: Maybe Text -> Handler (HtmlPage (View FE.Action))
-searchView _ = throwError $ err404 { errBody = "404 - Not Found" }
+searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
 app :: JSONSettings -> Wai.Application
 app settings =
