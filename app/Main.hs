@@ -47,6 +47,9 @@ import qualified Common.Server.JSONSettings as S
 import Common.Network.CatalogPostType (CatalogPost)
 import qualified Common.Component.CatalogGrid as Grid
 import qualified Common.Component.TimeControl as TC
+import Common.FrontEnd.Action (GetThreadArgs (..))
+import qualified Common.Component.Thread.Model as Thread
+import Common.Network.SiteType (Site)
 
 data HtmlPage a = forall b. (ToJSON b) => HtmlPage (JSONSettings, b, a)
 
@@ -100,7 +103,10 @@ type StaticRoute = "static" :> Servant.Raw
 type API = StaticRoute :<|> FrontEndRoutes
 
 handlers :: JSONSettings -> Server FrontEndRoutes
-handlers settings = (catalogView settings) :<|> threadView :<|> searchView
+handlers settings
+    =    (catalogView settings)
+    :<|> (threadView settings)
+    :<|> searchView
 
 clientSettings :: JSONSettings -> S.JSONSettings
 clientSettings (JSONSettings {..}) = S.JSONSettings
@@ -155,8 +161,48 @@ catalogView settings = do
 
                 tc_model = TC.Model 0
 
-threadView :: Text -> Text -> FE.BoardThreadId -> Handler (HtmlPage (View FE.Action))
-threadView _ _ _ = throwError $ err404 { errBody = "404 - Not Implemented" }
+threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (HtmlPage (View FE.Action))
+threadView settings website board_pathpart board_thread_id = do
+    thread_results <- liftIO $ do
+
+        Client.getThread
+            (clientSettings settings)
+            (clientModel settings)
+            (GetThreadArgs {..})
+
+    now <- liftIO getCurrentTime
+
+    case thread_results of
+        Left err -> throwError $ err500 { errBody = fromString $ show err }
+        Right site -> pure $ render now $ head site
+
+    where
+        render :: UTCTime -> Site -> HtmlPage (View FE.Action)
+        render t site =
+            HtmlPage
+                ( settings
+                , site
+                , FE.threadView website board_pathpart board_thread_id model
+                )
+
+            where
+                model = FE.Model
+                    { FE.grid_model = undefined
+                    , FE.client_model = undefined
+                    , FE.thread_model = Just thread_model
+                    , FE.current_uri = undefined
+                    , FE.media_root_ = undefined
+                    , FE.current_time = t
+                    , FE.tc_model = undefined
+                    , FE.search_model = undefined
+                    }
+
+                thread_model = Thread.Model
+                    { Thread.site = site
+                    , Thread.media_root = pack $ media_root settings
+                    , Thread.post_bodies = []
+                    , Thread.current_time = t
+                    }
 
 searchView :: Maybe Text -> Handler (HtmlPage (View FE.Action))
 searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
