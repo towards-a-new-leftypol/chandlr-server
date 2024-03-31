@@ -122,7 +122,8 @@ executable chandlr-server
                       http-types,
                       cmdargs,
                       mtl,
-                      utf8-string
+                      utf8-string,
+                      html-parse
 
     -- Directories containing source files.
     hs-source-dirs:   app

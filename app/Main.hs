@@ -49,6 +49,7 @@ import qualified Common.Component.CatalogGrid as Grid
 import qualified Common.Component.TimeControl as TC
 import Common.FrontEnd.Action (GetThreadArgs (..))
 import qualified Common.Component.Thread.Model as Thread
+import qualified Common.Component.ThreadView as Thread
 import Common.Network.SiteType (Site)
 
 data HtmlPage a = forall b. (ToJSON b) => HtmlPage (JSONSettings, b, a)
@@ -174,11 +175,14 @@ threadView settings website board_pathpart board_thread_id = do
 
     case thread_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right site -> pure $ render now $ head site
+        Right site -> do
+            let s = head site
+            posts_and_bodies <- liftIO $ Thread.getPostWithBodies s
+            pure $ render posts_and_bodies now s
 
     where
-        render :: UTCTime -> Site -> HtmlPage (View FE.Action)
-        render t site =
+        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> HtmlPage (View FE.Action)
+        render posts_and_bodies t site =
             HtmlPage
                 ( settings
                 , site
@@ -200,7 +204,7 @@ threadView settings website board_pathpart board_thread_id = do
                 thread_model = Thread.Model
                     { Thread.site = site
                     , Thread.media_root = pack $ media_root settings
-                    , Thread.post_bodies = []
+                    , Thread.post_bodies = posts_and_bodies
                     , Thread.current_time = t
                     }
 
