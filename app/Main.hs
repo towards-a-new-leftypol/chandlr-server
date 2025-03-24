@@ -112,7 +112,7 @@ handlers settings
 clientSettings :: JSONSettings -> S.JSONSettings
 clientSettings (JSONSettings {..}) = S.JSONSettings
     { S.postgrest_url = postgrest_url
-    , S.jwt = jwt
+    , S.jwt = pack jwt
     , S.backup_read_root = undefined
     , S.media_root_path = undefined
     , S.site_name = undefined
