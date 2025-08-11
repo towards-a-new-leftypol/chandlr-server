@@ -30,6 +30,7 @@ import Miso
     , script_
     , class_
     , ToView (..)
+    , div_
     )
 import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
@@ -97,10 +98,11 @@ instance (ToView a) => ToHtml (IndexPage a) where
 
                 , title_ [] [ "Chandlr" ]
 
-                -- , js $ static_root <> "/static/init.js"
-                , css $ static_root <> "/static/style.css"
+                , js $ static_root <> "/init.js"
+                , css $ static_root <> "/style.css"
                 ]
-            , body_ [] [ toView x ]
+            , body_ []
+                [ div_ [] [ toView x ] ]
             ]
         ]
 
@@ -268,7 +270,7 @@ threadView settings website board_pathpart board_thread_id = do
                     }
 
 
-searchView :: Maybe Text -> Handler (IndexPage (View FE.Action))
+searchView :: Maybe String -> Handler (IndexPage (View FE.Action))
 searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
 server :: JSONSettings -> Wai.Application
