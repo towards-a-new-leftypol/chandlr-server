@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant bracket" #-}
 
 module Main where
 
@@ -8,7 +10,28 @@ import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
 import Data.Text.Lazy (toStrict)
-import Miso (ToServerRoutes, View)
+import Miso
+    ( View
+    , HTML
+    , ToHtml (..)
+    , doctype_
+    , html_
+    , head_
+    , meta_
+    , charset_
+    , name_
+    , content_
+    , rel_
+    , link_
+    , href_
+    , src_
+    , body_
+    , type_
+    , script_
+    , class_
+    , ToView (..)
+    )
+import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
 import           Data.Proxy
 import qualified Network.Wai as Wai
@@ -24,17 +47,13 @@ import Servant.Server
     , err404
     , ServerError (..)
     )
-import qualified Lucid      as L
-import qualified Lucid.Base as L
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 import Data.Aeson (decode, ToJSON)
 import Data.Aeson.Text (encodeToLazyText)
-import Data.Time.Clock (getCurrentTime)
+import Data.Time.Clock (getCurrentTime, UTCTime)
 import Control.Monad.Except (throwError)
-import Data.Time.Clock (UTCTime)
-
 
 import JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -47,45 +66,63 @@ import qualified Common.Server.JSONSettings as S
 import Common.Network.CatalogPostType (CatalogPost)
 import qualified Common.Component.CatalogGrid as Grid
 import qualified Common.Component.TimeControl as TC
-import Common.FrontEnd.Action (GetThreadArgs (..))
+import Common.Network.ClientTypes (GetThreadArgs (..))
 import qualified Common.Component.Thread.Model as Thread
-import qualified Common.Component.ThreadView as Thread
+import qualified Common.Component.Thread as Thread
 import Common.Network.SiteType (Site)
 
-data HtmlPage a = forall b. (ToJSON b) => HtmlPage (JSONSettings, b, a)
+data IndexPage a = forall b. (ToJSON b) => IndexPage (JSONSettings, b, a)
 
-instance (L.ToHtml a) => L.ToHtml (HtmlPage a) where
-    toHtmlRaw = L.toHtml
-    toHtml (HtmlPage (settings, initial_data, x)) = do
-        L.doctype_
-        L.head_ $ do
-            L.meta_ [L.charset_ "utf-8"]
-            L.meta_ [L.name_ "viewport", L.content_ "width=device-width, initial-scale=1.0"]
-            L.meta_ [L.name_ "postgrest-root", L.content_ (pack $ postgrest_url settings)]
-            L.meta_ [L.name_ "postgrest-fetch-count", L.content_ (pack $ show $ postgrest_fetch_count settings)]
-            L.meta_ [L.name_ "media-root", L.content_ (pack $ media_root settings)]
-            L.meta_ [L.name_ "initial-data", L.content_ (toStrict $ encodeToLazyText initial_data) ]
+instance (ToView a) => ToHtml (IndexPage a) where
+    toHtml (IndexPage (settings, initial_data, x)) = toHtml
+        [ doctype_
+        , html_
+            []
+            [ head_
+                []
+                [ meta_ [ charset_ "utf-8" ]
+                , meta_
+                    [ name_ "viewport"
+                    , content_ "width=device-width, initial-scale=1.0"
+                    ]
+                , embedData "postgrest-root" (toMisoString $ postgrest_url settings)
+                , embedData "postgrest-fetch-count" (toMisoString $ postgrest_fetch_count settings)
+                , embedData "media-root" (toMisoString $ media_root settings)
+                -- , embedData "initial-data" (toStrict $ encodeToLazyText initial_data)
+                , script_
+                    [ class_ "initial-data"
+                    , type_ "application/json"
+                    ]
+                    (toStrict $ encodeToLazyText initial_data)
 
-            L.title_ "Chandlr"
+                , title_ [] [ "Chandlr" ]
 
-            L.link_ [L.rel_ "stylesheet", L.href_ $ static_root <> "/static/style.css"]
-            L.script_ [L.src_ $ static_root <> "/dist/build/chandlr/chandlr.jsexe/rts.js", L.makeAttribute "language" "javascript"] ("" :: B.ByteString)
-            L.script_ [L.src_ $ static_root <> "/dist/build/chandlr/chandlr.jsexe/lib.js", L.makeAttribute "language" "javascript"] ("" :: B.ByteString)
-            L.script_ [L.src_ $ static_root <> "/dist/build/chandlr/chandlr.jsexe/out.js", L.makeAttribute "language" "javascript"] ("" :: B.ByteString)
-
-            L.body_ (L.toHtml x)
-
-            L.script_
-                [ L.src_ $ static_root <> "/dist/build/chandlr/chandlr.jsexe/runmain.js"
-                , L.makeAttribute "language" "javascript"
-                , L.makeAttribute "defer" mempty
+                -- , js $ static_root <> "/static/init.js"
+                , css $ static_root <> "/static/style.css"
                 ]
-                ("" :: B.ByteString)
+            , body_ [] [ toView x ]
+            ]
+        ]
 
         where
-            static_root = pack $ static_serve_url_root settings
+            embedData name value = meta_ [ name_ name, content_ value ]
 
-type FrontEndRoutes = ToServerRoutes FE.Route HtmlPage FE.Action
+            static_root = static_serve_url_root settings
+
+            css href =
+                link_
+                    [ rel_ "stylesheet"
+                    , type_ "text/css"
+                    , href_ $ toMisoString href
+                    ]
+
+            js href =
+                script_
+                    [ type_ "module"
+                    , src_ $ toMisoString href
+                    ]
+                    ""
+
 {-
     :Created By:
       ___________________________              _____    _______________________
@@ -104,9 +141,11 @@ type FrontEndRoutes = ToServerRoutes FE.Route HtmlPage FE.Action
 
 type StaticRoute = "static" :> Servant.Raw
 
-type API = StaticRoute :<|> FrontEndRoutes
+type ServerRoutes = FE.Route (Get '[HTML] (IndexPage (View FE.Action)))
 
-handlers :: JSONSettings -> Server FrontEndRoutes
+type API = StaticRoute :<|> ServerRoutes
+
+handlers :: JSONSettings -> Server ServerRoutes
 handlers settings
     =    (catalogView settings)
     :<|> (threadView settings)
@@ -128,12 +167,11 @@ clientModel (JSONSettings {..}) = Client.Model
     , Client.fetchCount = postgrest_fetch_count
     }
 
-catalogView :: JSONSettings -> Handler (HtmlPage (View FE.Action))
+catalogView :: JSONSettings -> Handler (IndexPage (View FE.Action))
 catalogView settings = do
-    now <- liftIO $ getCurrentTime
+    now <- liftIO getCurrentTime
 
     catalog_results <- liftIO $ do
-
         Client.fetchLatest
             (clientSettings settings)
             (clientModel settings)
@@ -144,28 +182,40 @@ catalogView settings = do
         Right posts -> pure $ render now posts
 
     where
-        render :: UTCTime -> [ CatalogPost ] -> HtmlPage (View FE.Action)
-        render t posts = HtmlPage (settings, posts, FE.catalogView model)
+        render :: UTCTime -> [ CatalogPost ] -> IndexPage (View FE.Action)
+        render t posts =
+            IndexPage
+                ( settings
+                , posts
+                , FE.catalogView tc grid model
+                )
+
             where
+                m_root = toMisoString $ media_root settings
+
                 model = FE.Model
-                    { FE.grid_model = grid_model
-                    , FE.client_model = undefined
-                    , FE.thread_model = undefined
-                    , FE.current_uri = undefined
-                    , FE.media_root_ = undefined
+                    { FE.current_uri = undefined
+                    , FE.media_root_ = m_root
                     , FE.current_time = t
-                    , FE.tc_model = tc_model
-                    , FE.search_model = undefined
+                    , search_term = ""
+                    , initial_action = FE.NoAction
+                    , thread_message = Nothing
+                    , pg_api_root = toMisoString $ postgrest_url settings
+                    , client_fetch_count = 100
+                    , my_component_id = undefined
                     }
 
                 grid_model = Grid.Model
-                    { Grid.display_items = posts
-                    , Grid.media_root = toMisoString $ media_root settings
+                    { Grid.media_root = m_root
+                    , Grid.display_items = posts
                     }
 
-                tc_model = TC.Model 0
+                grid = Grid.mkApp grid_model
 
-threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (HtmlPage (View FE.Action))
+                tc = TC.app 0
+
+
+threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (IndexPage (View FE.Action))
 threadView settings website board_pathpart board_thread_id = do
     thread_results <- liftIO $ do
 
@@ -184,24 +234,30 @@ threadView settings website board_pathpart board_thread_id = do
             pure $ render posts_and_bodies now s
 
     where
-        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> HtmlPage (View FE.Action)
+        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> IndexPage (View FE.Action)
         render posts_and_bodies t site =
-            HtmlPage
+            IndexPage
                 ( settings
                 , site
-                , FE.threadView website board_pathpart board_thread_id model
+                , FE.mkThreadView
+                    thread_model
+                    website
+                    board_pathpart
+                    board_thread_id
+                    model
                 )
 
             where
                 model = FE.Model
-                    { FE.grid_model = undefined
-                    , FE.client_model = undefined
-                    , FE.thread_model = Just thread_model
-                    , FE.current_uri = undefined
+                    { FE.current_uri = undefined
                     , FE.media_root_ = undefined
                     , FE.current_time = t
-                    , FE.tc_model = undefined
-                    , FE.search_model = undefined
+                    , search_term = ""
+                    , initial_action = FE.NoAction
+                    , thread_message = Nothing
+                    , pg_api_root = toMisoString $ postgrest_url settings
+                    , client_fetch_count = 100
+                    , my_component_id = undefined
                     }
 
                 thread_model = Thread.Model
@@ -211,11 +267,12 @@ threadView settings website board_pathpart board_thread_id = do
                     , Thread.current_time = t
                     }
 
-searchView :: Maybe Text -> Handler (HtmlPage (View FE.Action))
+
+searchView :: Maybe Text -> Handler (IndexPage (View FE.Action))
 searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
-app :: JSONSettings -> Wai.Application
-app settings =
+server :: JSONSettings -> Wai.Application
+server settings =
     serve
         (Proxy @API)
         (staticHandler :<|> handlers settings)
@@ -256,4 +313,4 @@ main = do
 
     putStrLn $ "Serving front-end on port " ++ show port
 
-    Wai.run port $ Wai.logStdout (app settings)
+    Wai.run port $ Wai.logStdout (server settings)

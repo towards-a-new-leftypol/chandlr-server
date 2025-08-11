@@ -77,7 +77,7 @@ executable chandlr-server
                     Common.Component.Thread.Files
                     Common.Component.Thread.Intro
                     Common.Component.Thread.Model
-                    Common.Component.ThreadView
+                    Common.Component.Thread
                     Common.Component.TimeControl
                     Common.Network.BoardType
                     Common.Network.PostType
@@ -89,13 +89,16 @@ executable chandlr-server
                     Common.Parsing.PostBodyUtils
                     Common.Parsing.PostPartType
                     Common.Parsing.QuoteLinkParser
-                    Parsing.BodyParser
                     DataClient
                     Common.Server.JSONSettings
                     JSONSettings
                     Common.Component.Search.View
-                    Common.FrontEnd.Interfaces
                     Common.FrontEnd.Views
+                    Common.Component.CatalogGrid.GridTypes
+                    Common.Component.Search
+                    Common.Parsing.BodyParser
+                    Common.Utils
+                    Network.Client
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -114,7 +117,6 @@ executable chandlr-server
                       containers,
                       servant,
                       servant-server,
-                      lucid,
                       safe-exceptions,
                       bytestring,
                       http-conduit,
@@ -123,7 +125,8 @@ executable chandlr-server
                       cmdargs,
                       mtl,
                       utf8-string,
-                      html-parse
+                      html-parse,
+                      jsaddle
 
     -- Directories containing source files.
     hs-source-dirs:   app
