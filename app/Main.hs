@@ -30,7 +30,6 @@ import Miso
     , script_
     , class_
     , ToView (..)
-    , div_
     )
 import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
@@ -101,8 +100,7 @@ instance (ToView a) => ToHtml (IndexPage a) where
                 , js $ static_root <> "/init.js"
                 , css $ static_root <> "/style.css"
                 ]
-            , body_ []
-                [ div_ [] [ toView x ] ]
+            , body_ [] [ toView x ]
             ]
         ]
 
@@ -212,7 +210,7 @@ catalogView settings = do
                     , Grid.display_items = posts
                     }
 
-                grid = Grid.mkApp grid_model
+                grid = Grid.app grid_model
 
                 tc = TC.app 0
 
@@ -241,7 +239,7 @@ threadView settings website board_pathpart board_thread_id = do
             IndexPage
                 ( settings
                 , site
-                , FE.mkThreadView
+                , FE.threadView
                     thread_model
                     website
                     board_pathpart
