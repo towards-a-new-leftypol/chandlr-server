@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant bracket" #-}
 
@@ -12,27 +14,31 @@ import Data.Text (Text, pack)
 import Data.Text.Lazy (toStrict)
 import Miso
     ( View
-    , HTML
-    , ToHtml (..)
+    , ToView (..)
+    )
+import Miso.Html.Property
+    ( charset_
+    , name_
+    , content_
+    , rel_
+    , href_
+    , type_
+    , class_
+    , src_
+    )
+import Miso.Html
+    ( ToHtml (..)
     , doctype_
     , html_
     , head_
     , meta_
-    , charset_
-    , name_
-    , content_
-    , rel_
     , link_
-    , href_
-    , src_
     , body_
-    , type_
     , script_
-    , class_
-    , ToView (..)
     )
 import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
+import Servant.Miso.Html (HTML)
 import           Data.Proxy
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp             as Wai
@@ -71,9 +77,9 @@ import qualified Common.Component.Thread.Model as Thread
 import qualified Common.Component.Thread as Thread
 import Common.Network.SiteType (Site)
 
-data IndexPage a = forall b. (ToJSON b) => IndexPage (JSONSettings, b, a)
+data IndexPage a = forall b. (ToJSON b, ToView FE.Model a) => IndexPage (JSONSettings, b, a)
 
-instance (ToView a) => ToHtml (IndexPage a) where
+instance ToHtml (IndexPage a) where
     toHtml (IndexPage (settings, initial_data, x)) = toHtml
         [ doctype_
         , html_
@@ -93,14 +99,14 @@ instance (ToView a) => ToHtml (IndexPage a) where
                     [ class_ "initial-data"
                     , type_ "application/json"
                     ]
-                    (toStrict $ encodeToLazyText initial_data)
+                    (toMisoString $ toStrict $ encodeToLazyText initial_data)
 
                 , title_ [] [ "Chandlr" ]
 
                 , js $ static_root <> "/init.js"
                 , css $ static_root <> "/style.css"
                 ]
-            , body_ [] [ toView x ]
+            , body_ [] [ toView @FE.Model x ]
             ]
         ]
 
@@ -141,7 +147,7 @@ instance (ToView a) => ToHtml (IndexPage a) where
 
 type StaticRoute = "static" :> Servant.Raw
 
-type ServerRoutes = FE.Route (Get '[HTML] (IndexPage (View FE.Action)))
+type ServerRoutes = FE.Route (Get '[HTML] (IndexPage (View FE.Model FE.Action)))
 
 type API = StaticRoute :<|> ServerRoutes
 
@@ -163,11 +169,11 @@ clientSettings (JSONSettings {..}) = S.JSONSettings
 
 clientModel :: JSONSettings -> Client.Model
 clientModel (JSONSettings {..}) = Client.Model
-    { Client.pgApiRoot = pack postgrest_url
+    { Client.pgApiRoot = toMisoString postgrest_url
     , Client.fetchCount = postgrest_fetch_count
     }
 
-catalogView :: JSONSettings -> Handler (IndexPage (View FE.Action))
+catalogView :: JSONSettings -> Handler (IndexPage (View FE.Model FE.Action))
 catalogView settings = do
     now <- liftIO getCurrentTime
 
@@ -182,7 +188,7 @@ catalogView settings = do
         Right posts -> pure $ render now posts
 
     where
-        render :: UTCTime -> [ CatalogPost ] -> IndexPage (View FE.Action)
+        render :: UTCTime -> [ CatalogPost ] -> IndexPage (View FE.Model FE.Action)
         render t posts =
             IndexPage
                 ( settings
@@ -215,14 +221,19 @@ catalogView settings = do
                 tc = TC.app 0
 
 
-threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (IndexPage (View FE.Action))
+threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (IndexPage (View FE.Model FE.Action))
 threadView settings website board_pathpart board_thread_id = do
     thread_results <- liftIO $ do
 
         Client.getThread
             (clientSettings settings)
             (clientModel settings)
-            (GetThreadArgs {..})
+            (GetThreadArgs
+                { website = toMisoString website
+                , board_pathpart = toMisoString board_pathpart
+                , board_thread_id = board_thread_id
+                }
+            )
 
     now <- liftIO getCurrentTime
 
@@ -234,7 +245,7 @@ threadView settings website board_pathpart board_thread_id = do
             pure $ render posts_and_bodies now s
 
     where
-        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> IndexPage (View FE.Action)
+        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> IndexPage (View FE.Model FE.Action)
         render posts_and_bodies t site =
             IndexPage
                 ( settings
@@ -262,13 +273,13 @@ threadView settings website board_pathpart board_thread_id = do
 
                 thread_model = Thread.Model
                     { Thread.site = site
-                    , Thread.media_root = pack $ media_root settings
+                    , Thread.media_root = toMisoString $ media_root settings
                     , Thread.post_bodies = posts_and_bodies
                     , Thread.current_time = t
                     }
 
 
-searchView :: Maybe String -> Handler (IndexPage (View FE.Action))
+searchView :: Maybe String -> Handler (IndexPage (View FE.Model FE.Action))
 searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
 server :: JSONSettings -> Wai.Application

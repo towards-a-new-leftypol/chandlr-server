@@ -7,5 +7,5 @@ import Miso (Component, component, text)
 
 import Common.Network.ClientTypes (Model (Uninitialized), Action)
 
-app :: Component Model Action
+app :: Component parent Model Action
 app = component Uninitialized (const $ return ()) (const $ text "")

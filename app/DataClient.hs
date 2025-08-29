@@ -11,8 +11,8 @@ module DataClient
 import Data.Time.Clock (UTCTime)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LC8
-import qualified Data.Text as Text
 import Data.Aeson (eitherDecode, encode, FromJSON)
+import Miso.String (fromMisoString)
 
 import Common.Network.CatalogPostType (CatalogPost)
 import Common.Network.ClientTypes (Model (..), FetchCatalogArgs (..), GetThreadArgs (..))
@@ -41,8 +41,8 @@ getThread settings _ GetThreadArgs {..} =
     where
         path = "/sites?"
             <> "select=*,boards(*,threads(*,posts(*,attachments(*))))"
-            <> "&name=eq." <> Text.unpack website
-            <> "&boards.pathpart=eq." <> Text.unpack board_pathpart
+            <> "&name=eq." <> fromMisoString website
+            <> "&boards.pathpart=eq." <> fromMisoString board_pathpart
             <> "&boards.threads.board_thread_id=eq." <> show board_thread_id
             <> "&boards.threads.posts.order=board_post_id.asc"
 

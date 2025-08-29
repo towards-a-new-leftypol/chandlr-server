@@ -126,7 +126,8 @@ executable chandlr-server
                       mtl,
                       utf8-string,
                       html-parse,
-                      jsaddle
+                      jsaddle,
+                      servant-miso-html
 
     -- Directories containing source files.
     hs-source-dirs:   app
