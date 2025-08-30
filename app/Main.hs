@@ -74,8 +74,8 @@ import qualified Common.Component.CatalogGrid as Grid
 import qualified Common.Component.TimeControl as TC
 import Common.Network.ClientTypes (GetThreadArgs (..))
 import qualified Common.Component.Thread.Model as Thread
-import qualified Common.Component.Thread as Thread
 import Common.Network.SiteType (Site)
+import Common.Component.BodyRender (getPostWithBodies)
 
 data IndexPage a = forall b. (ToJSON b, ToView FE.Model a) => IndexPage (JSONSettings, b, a)
 
@@ -240,8 +240,9 @@ threadView settings website board_pathpart board_thread_id = do
     case thread_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
         Right site -> do
-            let s = head site
-            posts_and_bodies <- liftIO $ Thread.getPostWithBodies s
+            let
+                s = head site
+                posts_and_bodies = getPostWithBodies s
             pure $ render posts_and_bodies now s
 
     where
