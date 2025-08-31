@@ -208,7 +208,6 @@ catalogView settings = do
                     , thread_message = Nothing
                     , pg_api_root = toMisoString $ postgrest_url settings
                     , client_fetch_count = 100
-                    , my_component_id = undefined
                     }
 
                 grid_model = Grid.Model
@@ -269,7 +268,6 @@ threadView settings website board_pathpart board_thread_id = do
                     , thread_message = Nothing
                     , pg_api_root = toMisoString $ postgrest_url settings
                     , client_fetch_count = 100
-                    , my_component_id = undefined
                     }
 
                 thread_model = Thread.Model
