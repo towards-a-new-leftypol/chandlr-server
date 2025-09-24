@@ -99,6 +99,7 @@ executable chandlr-server
                     Common.Parsing.BodyParser
                     Common.Utils
                     Network.Client
+                    IndexPage
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

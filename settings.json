@@ -1,8 +1,10 @@
 {
   "postgrest_url": "http://localhost:3000",
+  "postgrest_url": "http://192.168.4.6:3000",
   "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiY2hhbl9hcmNoaXZlciJ9.rGIKZokTDKTuQLIv8138bUby5PELfDipYYIDpJzH02c",
-  "postgrest_fetch_count": 2000,
+  "postgrest_fetch_count": 200,
   "media_root": "http://localhost:8889",
+  "media_root": "http://192.168.4.6:8333",
   "static_serve_path": "/home/phil/Documents/haskell/chandlr-miso/static",
   "static_serve_url_root": "/static"
 }

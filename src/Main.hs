@@ -11,32 +11,9 @@ module Main where
 import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
-import Data.Text.Lazy (toStrict)
 import Miso
     ( View
-    , ToView (..)
     )
-import Miso.Html.Property
-    ( charset_
-    , name_
-    , content_
-    , rel_
-    , href_
-    , type_
-    , class_
-    , src_
-    )
-import Miso.Html
-    ( ToHtml (..)
-    , doctype_
-    , html_
-    , head_
-    , meta_
-    , link_
-    , body_
-    , script_
-    )
-import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
 import Servant.Miso.Html (HTML)
 import           Data.Proxy
@@ -56,8 +33,7 @@ import Servant.Server
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
-import Data.Aeson (decode, ToJSON)
-import Data.Aeson.Text (encodeToLazyText)
+import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime, UTCTime)
 import Control.Monad.Except (throwError)
 
@@ -76,58 +52,8 @@ import Common.Network.ClientTypes (GetThreadArgs (..))
 import qualified Common.Component.Thread.Model as Thread
 import Common.Network.SiteType (Site)
 import Common.Component.BodyRender (getPostWithBodies)
-
-data IndexPage a = forall b. (ToJSON b, ToView FE.Model a) => IndexPage (JSONSettings, b, a)
-
-instance ToHtml (IndexPage a) where
-    toHtml (IndexPage (settings, initial_data, x)) = toHtml
-        [ doctype_
-        , html_
-            []
-            [ head_
-                []
-                [ meta_ [ charset_ "utf-8" ]
-                , meta_
-                    [ name_ "viewport"
-                    , content_ "width=device-width, initial-scale=1.0"
-                    ]
-                , embedData "postgrest-root" (toMisoString $ postgrest_url settings)
-                , embedData "postgrest-fetch-count" (toMisoString $ postgrest_fetch_count settings)
-                , embedData "media-root" (toMisoString $ media_root settings)
-                -- , embedData "initial-data" (toStrict $ encodeToLazyText initial_data)
-                , script_
-                    [ class_ "initial-data"
-                    , type_ "application/json"
-                    ]
-                    (toMisoString $ toStrict $ encodeToLazyText initial_data)
-
-                , title_ [] [ "Chandlr" ]
-
-                , js $ static_root <> "/init.js"
-                , css $ static_root <> "/style.css"
-                ]
-            , body_ [] [ toView @FE.Model x ]
-            ]
-        ]
-
-        where
-            embedData name value = meta_ [ name_ name, content_ value ]
-
-            static_root = static_serve_url_root settings
-
-            css href =
-                link_
-                    [ rel_ "stylesheet"
-                    , type_ "text/css"
-                    , href_ $ toMisoString href
-                    ]
-
-            js href =
-                script_
-                    [ type_ "module"
-                    , src_ $ toMisoString href
-                    ]
-                    ""
+import qualified Common.Component.BodyRender as Body
+import IndexPage (IndexPage (..))
 
 {-
     :Created By:
@@ -242,6 +168,11 @@ threadView settings website board_pathpart board_thread_id = do
             let
                 s = head site
                 posts_and_bodies = getPostWithBodies s
+            liftIO $ do
+                putStrLn "threadView - posts and bodies:"
+                let first_post_parts = snd $ head posts_and_bodies
+                print first_post_parts
+                print $ toHtml $ Body.render s first_post_parts
             pure $ render posts_and_bodies now s
 
     where
