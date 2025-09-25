@@ -91,9 +91,9 @@ executable chandlr-server
                     Common.Parsing.QuoteLinkParser
                     DataClient
                     Common.Server.JSONSettings
-                    JSONSettings
                     Common.Component.Search.View
                     Common.FrontEnd.Views
+                    Common.FrontEnd.JSONSettings
                     Common.Component.CatalogGrid.GridTypes
                     Common.Component.Search
                     Common.Parsing.BodyParser

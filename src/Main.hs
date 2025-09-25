@@ -11,10 +11,9 @@ module Main where
 import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
-import Miso
-    ( View
-    )
-import Miso.String (toMisoString)
+import Miso (View)
+import Miso.String (toMisoString, fromMisoString)
+import Miso.Html (toHtml)
 import Servant.Miso.Html (HTML)
 import           Data.Proxy
 import qualified Network.Wai as Wai
@@ -37,7 +36,7 @@ import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime, UTCTime)
 import Control.Monad.Except (throwError)
 
-import JSONSettings
+import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
 import qualified Common.FrontEnd.Action as FE
 import qualified Common.FrontEnd.Model  as FE
@@ -85,7 +84,7 @@ handlers settings
 
 clientSettings :: JSONSettings -> S.JSONSettings
 clientSettings (JSONSettings {..}) = S.JSONSettings
-    { S.postgrest_url = postgrest_url
+    { S.postgrest_url = fromMisoString postgrest_url
     , S.jwt = pack jwt
     , S.backup_read_root = undefined
     , S.media_root_path = undefined

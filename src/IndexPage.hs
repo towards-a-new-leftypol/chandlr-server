@@ -36,7 +36,7 @@ import Miso.String (toMisoString)
 import Data.Aeson (ToJSON)
 import Data.Aeson.Text (encodeToLazyText)
 
-import JSONSettings
+import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Model  as FE
 
 data IndexPage a = forall b. (ToJSON b, ToView FE.Model a) => IndexPage (JSONSettings, b, a)
@@ -48,34 +48,34 @@ instance ToHtml (IndexPage a) where
             []
             [ head_
                 []
-                [ meta_ [ charset_ "utf-8" ]
-                , meta_
-                    [ name_ "viewport"
-                    , content_ "width=device-width, initial-scale=1.0"
-                    ]
-                , embedData "postgrest-root" (toMisoString $ postgrest_url settings)
-                , embedData "postgrest-fetch-count" (toMisoString $ postgrest_fetch_count settings)
-                , embedData "media-root" (toMisoString $ media_root settings)
-                -- , embedData "initial-data" (toStrict $ encodeToLazyText initial_data)
-                , script_
-                    [ class_ "initial-data"
-                    , type_ "application/json"
-                    ]
-                    (toMisoString $ toStrict $ encodeToLazyText initial_data)
+                (
+                    [ meta_ [ charset_ "utf-8" ]
+                    , meta_
+                        [ name_ "viewport"
+                        , content_ "width=device-width, initial-scale=1.0"
+                        ]
+                    ] 
+                    ++
+                    (asHtml settings)
+                    ++
+                    [ script_
+                        [ class_ "initial-data"
+                        , type_ "application/json"
+                        ]
+                        (toMisoString $ toStrict $ encodeToLazyText initial_data)
 
-                , title_ [] [ "Chandlr" ]
+                    , title_ [] [ "Chandlr" ]
 
-                --, js_wasm $ static_root <> "/init.js"
-                , js_js $ static_root <> "/all.js"
-                , css $ static_root <> "/style.css"
-                ]
+                    , js_wasm $ static_root <> "/init.js"
+                    --, js_js $ static_root <> "/all.js"
+                    , css $ static_root <> "/style.css"
+                    ]
+                )
             , body_ [] [ toView @FE.Model x ]
             ]
         ]
 
         where
-            embedData name value = meta_ [ name_ name, content_ value ]
-
             static_root = static_serve_url_root settings
 
             css href =
