@@ -12,6 +12,7 @@ let
     html-parse = html-parse;
     miso = miso;
     servant-miso-router = servant-miso-router;
+    servant-miso-html = servant-miso-html;
   };
 
   env = drv.env.overrideAttrs (oldAttrs: {
