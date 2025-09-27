@@ -12,8 +12,10 @@ import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
 import Miso (View)
+import qualified Miso as M
 import Miso.String (toMisoString, fromMisoString)
 import Miso.Html (toHtml)
+import Miso.Router (parseURI)
 import Servant.Miso.Html (HTML)
 import           Data.Proxy
 import qualified Network.Wai as Wai
@@ -35,6 +37,7 @@ import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime, UTCTime)
 import Control.Monad.Except (throwError)
+import Data.Either (fromRight)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -53,6 +56,7 @@ import Common.Network.SiteType (Site)
 import Common.Component.BodyRender (getPostWithBodies)
 import qualified Common.Component.BodyRender as Body
 import IndexPage (IndexPage (..))
+import qualified Common.FrontEnd.MainComponent as MC
 
 {-
     :Created By:
@@ -72,15 +76,32 @@ import IndexPage (IndexPage (..))
 
 type StaticRoute = "static" :> Servant.Raw
 
-type ServerRoutes = FE.Route (Get '[HTML] (IndexPage (View FE.Model FE.Action)))
+type PageType = IndexPage MC.MainComponent
+
+type GET_Result = Get '[HTML] PageType
+
+type ServerRoutes = FE.Route GET_Result
 
 type API = StaticRoute :<|> ServerRoutes
+
 
 handlers :: JSONSettings -> Server ServerRoutes
 handlers settings
     =    (catalogView settings)
     :<|> (threadView settings)
     :<|> searchView
+
+
+server :: JSONSettings -> Wai.Application
+server settings =
+    serve
+        (Proxy @API)
+        (staticHandler :<|> handlers settings)
+
+    where
+        staticHandler :: Server StaticRoute
+        staticHandler = Servant.serveDirectoryFileServer (static_serve_path settings)
+
 
 clientSettings :: JSONSettings -> S.JSONSettings
 clientSettings (JSONSettings {..}) = S.JSONSettings
@@ -92,13 +113,34 @@ clientSettings (JSONSettings {..}) = S.JSONSettings
     , S.site_url = undefined
     }
 
+
 clientModel :: JSONSettings -> Client.Model
 clientModel (JSONSettings {..}) = Client.Model
     { Client.pgApiRoot = toMisoString postgrest_url
     , Client.fetchCount = postgrest_fetch_count
     }
 
-catalogView :: JSONSettings -> Handler (IndexPage (View FE.Model FE.Action))
+
+serverRouteLink
+    :: forall endpoint.
+       ( IsElem endpoint ServerRoutes
+       , HasLink endpoint
+       )
+    => Proxy endpoint
+    -> MkLink endpoint Link
+serverRouteLink = safeLink (Proxy @ServerRoutes)
+
+
+routeLinkToURI :: Link -> M.URI
+routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . toMisoString . toUrlPiece
+
+
+-- Wat! Why doesn't this build but the usage below does !?
+-- endpointUrl :: _
+-- endpointUrl = routeLinkToURI . serverRouteLink
+
+
+catalogView :: JSONSettings -> Handler PageType
 catalogView settings = do
     now <- liftIO getCurrentTime
 
@@ -110,42 +152,22 @@ catalogView settings = do
 
     case catalog_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right posts -> pure $ render now posts
+        Right posts -> pure $
+            let initialData = MC.CatalogData posts
+                initialDataPayload = MC.InitialDataPayload now initialData
+            in
 
-    where
-        render :: UTCTime -> [ CatalogPost ] -> IndexPage (View FE.Model FE.Action)
-        render t posts =
             IndexPage
                 ( settings
                 , posts
-                , FE.catalogView tc grid model
+                , MC.app settings uri initialDataPayload
                 )
 
-            where
-                m_root = toMisoString $ media_root settings
-
-                model = FE.Model
-                    { FE.current_uri = undefined
-                    , FE.media_root_ = m_root
-                    , FE.current_time = t
-                    , search_term = ""
-                    , initial_action = FE.NoAction
-                    , thread_message = Nothing
-                    , pg_api_root = toMisoString $ postgrest_url settings
-                    , client_fetch_count = 100
-                    }
-
-                grid_model = Grid.Model
-                    { Grid.media_root = m_root
-                    , Grid.display_items = posts
-                    }
-
-                grid = Grid.app grid_model
-
-                tc = TC.app 0
+    where
+        uri = (routeLinkToURI . serverRouteLink) (Proxy :: Proxy GET_Result)
 
 
-threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler (IndexPage (View FE.Model FE.Action))
+threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
 threadView settings website board_pathpart board_thread_id = do
     thread_results <- liftIO $ do
 
@@ -208,25 +230,18 @@ threadView settings website board_pathpart board_thread_id = do
                     }
 
 
-searchView :: Maybe String -> Handler (IndexPage (View FE.Model FE.Action))
+searchView :: Maybe String -> Handler PageType
 searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
 
-server :: JSONSettings -> Wai.Application
-server settings =
-    serve
-        (Proxy @API)
-        (staticHandler :<|> handlers settings)
-
-    where
-        staticHandler :: Server StaticRoute
-        staticHandler = Servant.serveDirectoryFileServer (static_serve_path settings)
 
 port :: Int
 port = 8888
 
+
 newtype CliArgs = CliArgs
   { settingsFile :: String
   } deriving (Show, Data, Typeable)
+
 
 getSettings :: IO JSONSettings
 getSettings = do
@@ -245,6 +260,7 @@ getSettings = do
                 putStrLn "Error: Invalid JSON format."
                 exitFailure
             Just settings -> return settings
+
 
 main :: IO ()
 main = do

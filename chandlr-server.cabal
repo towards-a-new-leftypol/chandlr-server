@@ -128,7 +128,9 @@ executable chandlr-server
                       utf8-string,
                       html-parse,
                       jsaddle,
-                      servant-miso-html
+                      servant-miso-router,
+                      servant-miso-html,
+                      network-uri
 
     -- Directories containing source files.
     hs-source-dirs:   src
