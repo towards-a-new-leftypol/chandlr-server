@@ -11,10 +11,8 @@ module Main where
 import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text, pack)
-import Miso (View)
 import qualified Miso as M
 import Miso.String (toMisoString, fromMisoString)
-import Miso.Html (toHtml)
 import Miso.Router (parseURI)
 import Servant.Miso.Html (HTML)
 import           Data.Proxy
@@ -35,26 +33,17 @@ import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 import Data.Aeson (decode)
-import Data.Time.Clock (getCurrentTime, UTCTime)
+import Data.Time.Clock (getCurrentTime)
 import Control.Monad.Except (throwError)
 import Data.Either (fromRight)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
-import qualified Common.FrontEnd.Action as FE
-import qualified Common.FrontEnd.Model  as FE
-import qualified Common.FrontEnd.Views  as FE
 import qualified DataClient as Client
 import qualified Common.Network.ClientTypes as Client
 import qualified Common.Server.JSONSettings as S
-import Common.Network.CatalogPostType (CatalogPost)
-import qualified Common.Component.CatalogGrid as Grid
-import qualified Common.Component.TimeControl as TC
 import Common.Network.ClientTypes (GetThreadArgs (..))
-import qualified Common.Component.Thread.Model as Thread
-import Common.Network.SiteType (Site)
 import Common.Component.BodyRender (getPostWithBodies)
-import qualified Common.Component.BodyRender as Body
 import IndexPage (IndexPage (..))
 import qualified Common.FrontEnd.MainComponent as MC
 
@@ -159,12 +148,13 @@ catalogView settings = do
 
             IndexPage
                 ( settings
-                , posts
+                , initialDataPayload
                 , MC.app settings uri initialDataPayload
                 )
 
     where
-        uri = (routeLinkToURI . serverRouteLink) (Proxy :: Proxy GET_Result)
+        uri :: M.URI
+        uri = (routeLinkToURI . serverRouteLink) (Proxy :: Proxy (FE.R_Latest GET_Result))
 
 
 threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
@@ -185,49 +175,24 @@ threadView settings website board_pathpart board_thread_id = do
 
     case thread_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right site -> do
+        Right site -> pure $
             let
-                s = head site
-                posts_and_bodies = getPostWithBodies s
-            liftIO $ do
-                putStrLn "threadView - posts and bodies:"
-                let first_post_parts = snd $ head posts_and_bodies
-                print first_post_parts
-                print $ toHtml $ Body.render s first_post_parts
-            pure $ render posts_and_bodies now s
+                s                  = head site
+                postsWithBodies    = getPostWithBodies s
+                threadData         = MC.ThreadData s postsWithBodies
+                initialDataPayload = MC.InitialDataPayload now threadData
+            in
 
-    where
-        render :: [ Thread.PostWithBody ] -> UTCTime -> Site -> IndexPage (View FE.Model FE.Action)
-        render posts_and_bodies t site =
             IndexPage
                 ( settings
                 , site
-                , FE.threadView
-                    thread_model
-                    website
-                    board_pathpart
-                    board_thread_id
-                    model
+                , MC.app settings uri initialDataPayload
                 )
 
-            where
-                model = FE.Model
-                    { FE.current_uri = undefined
-                    , FE.media_root_ = undefined
-                    , FE.current_time = t
-                    , search_term = ""
-                    , initial_action = FE.NoAction
-                    , thread_message = Nothing
-                    , pg_api_root = toMisoString $ postgrest_url settings
-                    , client_fetch_count = 100
-                    }
-
-                thread_model = Thread.Model
-                    { Thread.site = site
-                    , Thread.media_root = toMisoString $ media_root settings
-                    , Thread.post_bodies = posts_and_bodies
-                    , Thread.current_time = t
-                    }
+    where
+        uri :: M.URI
+        -- this is crazy that this works:
+        uri = routeLinkToURI $ serverRouteLink (Proxy :: Proxy (FE.R_Thread GET_Result)) website board_pathpart board_thread_id
 
 
 searchView :: Maybe String -> Handler PageType

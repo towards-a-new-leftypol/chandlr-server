@@ -8,7 +8,6 @@
 module IndexPage where
 
 import Miso (ToView (..))
-import Data.Text.Lazy (toStrict)
 import Miso.Html.Property
     ( charset_
     , name_
@@ -33,8 +32,9 @@ import Miso.Html
     )
 import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
-import Data.Aeson (ToJSON)
-import Data.Aeson.Text (encodeToLazyText)
+import Data.Aeson (ToJSON, encode)
+import Data.ByteString (toStrict)
+import qualified Data.ByteString.Base64 as B64
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Model  as FE
@@ -60,9 +60,9 @@ instance ToHtml (IndexPage a) where
                     ++
                     [ script_
                         [ class_ "initial-data"
-                        , type_ "application/json"
+                        , type_ "text/plain"
                         ]
-                        (toMisoString $ toStrict $ encodeToLazyText initial_data)
+                        (toMisoString $ B64.encode $ toStrict $ encode initial_data)
 
                     , title_ [] [ "Chandlr" ]
 

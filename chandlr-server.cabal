@@ -94,6 +94,8 @@ executable chandlr-server
                     Common.Component.Search.View
                     Common.FrontEnd.Views
                     Common.FrontEnd.JSONSettings
+                    Common.FrontEnd.Update
+                    Common.FrontEnd.MainComponent
                     Common.Component.CatalogGrid.GridTypes
                     Common.Component.Search
                     Common.Parsing.BodyParser
@@ -130,7 +132,8 @@ executable chandlr-server
                       jsaddle,
                       servant-miso-router,
                       servant-miso-html,
-                      network-uri
+                      network-uri,
+                      base64-bytestring
 
     -- Directories containing source files.
     hs-source-dirs:   src
