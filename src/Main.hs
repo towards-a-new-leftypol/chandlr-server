@@ -45,7 +45,8 @@ import qualified Common.Server.JSONSettings as S
 import Common.Network.ClientTypes (GetThreadArgs (..))
 import Common.Component.BodyRender (getPostWithBodies)
 import IndexPage (IndexPage (..))
-import qualified Common.FrontEnd.MainComponent as MC
+import Common.FrontEnd.MainComponent (MainComponent, app)
+import Common.FrontEnd.Types
 
 {-
     :Created By:
@@ -65,7 +66,7 @@ import qualified Common.FrontEnd.MainComponent as MC
 
 type StaticRoute = "static" :> Servant.Raw
 
-type PageType = IndexPage MC.MainComponent
+type PageType = IndexPage MainComponent
 
 type GET_Result = Get '[HTML] PageType
 
@@ -121,7 +122,7 @@ serverRouteLink = safeLink (Proxy @ServerRoutes)
 
 
 routeLinkToURI :: Link -> M.URI
-routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . toMisoString . toUrlPiece
+routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . ("/" <>) . toMisoString . toUrlPiece
 
 
 -- Wat! Why doesn't this build but the usage below does !?
@@ -142,14 +143,15 @@ catalogView settings = do
     case catalog_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
         Right posts -> pure $
-            let initialData = MC.CatalogData posts
-                initialDataPayload = MC.InitialDataPayload now initialData
+            let initialData = CatalogData posts
+                initialDataPayload = InitialDataPayload now initialData
             in
 
             IndexPage
                 ( settings
+                , now
                 , initialDataPayload
-                , MC.app settings uri initialDataPayload
+                , app settings uri initialDataPayload
                 )
 
     where
@@ -179,14 +181,15 @@ threadView settings website board_pathpart board_thread_id = do
             let
                 s                  = head site
                 postsWithBodies    = getPostWithBodies s
-                threadData         = MC.ThreadData s postsWithBodies
-                initialDataPayload = MC.InitialDataPayload now threadData
+                threadData         = ThreadData s postsWithBodies
+                initialDataPayload = InitialDataPayload now threadData
             in
 
             IndexPage
                 ( settings
-                , site
-                , MC.app settings uri initialDataPayload
+                , now
+                , initialDataPayload
+                , app settings uri initialDataPayload
                 )
 
     where
