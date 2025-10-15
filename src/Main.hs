@@ -35,6 +35,7 @@ import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime)
 import Control.Monad.Except (throwError)
 import Data.Either (fromRight)
+import Data.IORef (newIORef)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -141,17 +142,20 @@ catalogView settings = do
 
     case catalog_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right posts -> pure $
+        Right posts -> do
             let initialData = CatalogData posts
-                initialDataPayload = InitialDataPayload now initialData
-            in
+            let initialDataPayload = InitialDataPayload now initialData
+            let ctx = AppInitCtx uri settings initialDataPayload
 
-            IndexPage
-                ( settings
-                , now
-                , initialDataPayload
-                , app settings uri initialDataPayload
-                )
+            ctxRef <- liftIO $ newIORef ctx
+
+            pure $
+                IndexPage
+                    ( settings
+                    , now
+                    , initialDataPayload
+                    , app ctxRef
+                    )
 
     where
         uri :: M.URI
@@ -176,19 +180,20 @@ threadView settings website board_pathpart board_thread_id = do
 
     case thread_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right site -> pure $
-            let
-                s                  = head site
-                postsWithBodies    = getPostWithBodies s
-                threadData         = ThreadData s postsWithBodies
-                initialDataPayload = InitialDataPayload now threadData
-            in
+        Right site -> do
+            let s                  = head site
+            let postsWithBodies    = getPostWithBodies s
+            let threadData         = ThreadData s postsWithBodies
+            let initialDataPayload = InitialDataPayload now threadData
+            let ctx                = AppInitCtx uri settings initialDataPayload
 
-            IndexPage
+            ctxRef <- liftIO $ newIORef ctx
+
+            pure $ IndexPage
                 ( settings
                 , now
                 , initialDataPayload
-                , app settings uri initialDataPayload
+                , app ctxRef
                 )
 
     where
@@ -205,12 +210,15 @@ searchView settings Nothing = do
     now <- liftIO getCurrentTime
 
     let initialDataPayload = InitialDataPayload now (SearchData [])
+    let ctx = AppInitCtx uri settings initialDataPayload
+
+    ctxRef <- liftIO $ newIORef ctx
 
     pure $ IndexPage
         ( settings
         , now
         , initialDataPayload
-        , app settings uri initialDataPayload
+        , app ctxRef
         )
 
     where
@@ -229,17 +237,20 @@ searchView settings queryParam@(Just query) = do
 
     case searchResult of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right posts -> pure $
+        Right posts -> do
             let initialData = SearchData posts
-                initialDataPayload = InitialDataPayload now initialData
-            in
+            let initialDataPayload = InitialDataPayload now initialData
+            let ctx = AppInitCtx uri settings initialDataPayload
 
-            IndexPage
-                ( settings
-                , now
-                , initialDataPayload
-                , app settings uri initialDataPayload
-                )
+            ctxRef <- liftIO $ newIORef ctx
+
+            pure $
+                IndexPage
+                    ( settings
+                    , now
+                    , initialDataPayload
+                    , app ctxRef
+                    )
 
     where
         proxy = (Proxy :: Proxy (FE.R_SearchResults GET_Result))
