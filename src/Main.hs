@@ -26,7 +26,6 @@ import Servant.Server
     , Handler (..)
     , serve
     , err500
-    , err404
     , ServerError (..)
     )
 import qualified Data.ByteString.Lazy as B
@@ -79,7 +78,7 @@ handlers :: JSONSettings -> Server ServerRoutes
 handlers settings
     =    (catalogView settings)
     :<|> (threadView settings)
-    :<|> searchView
+    :<|> (searchView settings)
 
 
 server :: JSONSettings -> Wai.Application
@@ -193,13 +192,60 @@ threadView settings website board_pathpart board_thread_id = do
                 )
 
     where
+        proxy = (Proxy :: Proxy (FE.R_Thread GET_Result))
+
         uri :: M.URI
         -- this is crazy that this works:
-        uri = routeLinkToURI $ serverRouteLink (Proxy :: Proxy (FE.R_Thread GET_Result)) website board_pathpart board_thread_id
+        uri = routeLinkToURI $
+                serverRouteLink proxy website board_pathpart board_thread_id
 
 
-searchView :: Maybe String -> Handler PageType
-searchView _ = throwError $ err404 { errBody = "404 - Not Implemented" }
+searchView :: JSONSettings -> Maybe String -> Handler PageType
+searchView settings Nothing = do
+    now <- liftIO getCurrentTime
+
+    let initialDataPayload = InitialDataPayload now (SearchData [])
+
+    pure $ IndexPage
+        ( settings
+        , now
+        , initialDataPayload
+        , app settings uri initialDataPayload
+        )
+
+    where
+        proxy = (Proxy :: Proxy (FE.R_SearchResults GET_Result))
+
+        uri :: M.URI
+        uri = routeLinkToURI $ serverRouteLink proxy Nothing
+
+searchView settings queryParam@(Just query) = do
+    now <- liftIO getCurrentTime
+
+    searchResult <- liftIO $ do
+        Client.search
+            (clientSettings settings)
+            (toMisoString query)
+
+    case searchResult of
+        Left err -> throwError $ err500 { errBody = fromString $ show err }
+        Right posts -> pure $
+            let initialData = SearchData posts
+                initialDataPayload = InitialDataPayload now initialData
+            in
+
+            IndexPage
+                ( settings
+                , now
+                , initialDataPayload
+                , app settings uri initialDataPayload
+                )
+
+    where
+        proxy = (Proxy :: Proxy (FE.R_SearchResults GET_Result))
+
+        uri :: M.URI
+        uri = routeLinkToURI $ serverRouteLink proxy queryParam
 
 
 port :: Int

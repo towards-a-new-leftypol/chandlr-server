@@ -5,6 +5,7 @@
 module DataClient
     ( fetchLatest
     , getThread
+    , search
     )
     where
 
@@ -12,10 +13,10 @@ import Data.Time.Clock (UTCTime)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LC8
 import Data.Aeson (eitherDecode, encode, FromJSON)
-import Miso.String (fromMisoString)
+import Miso.String (fromMisoString, MisoString)
 
 import Common.Network.CatalogPostType (CatalogPost)
-import Common.Network.ClientTypes (Model (..), FetchCatalogArgs (..), GetThreadArgs (..))
+import Common.Network.ClientTypes
 import Common.Network.HttpClient
     ( post
     , get
@@ -45,6 +46,16 @@ getThread settings _ GetThreadArgs {..} =
             <> "&boards.pathpart=eq." <> fromMisoString board_pathpart
             <> "&boards.threads.board_thread_id=eq." <> show board_thread_id
             <> "&boards.threads.posts.order=board_post_id.asc"
+
+search :: JSONSettings -> MisoString -> IO (Either HttpError [ CatalogPost ])
+search settings query = do
+    post settings "/rpc/search_posts" payload False >>= return . eitherDecodeResponse
+
+    where
+        payload = encode SearchPostsArgs
+            { search_text = query
+            , max_rows = 200
+            }
 
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
