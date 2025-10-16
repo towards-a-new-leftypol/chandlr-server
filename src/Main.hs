@@ -152,7 +152,6 @@ catalogView settings = do
             pure $
                 IndexPage
                     ( settings
-                    , now
                     , initialDataPayload
                     , app ctxRef
                     )
@@ -191,7 +190,6 @@ threadView settings website board_pathpart board_thread_id = do
 
             pure $ IndexPage
                 ( settings
-                , now
                 , initialDataPayload
                 , app ctxRef
                 )
@@ -216,7 +214,6 @@ searchView settings Nothing = do
 
     pure $ IndexPage
         ( settings
-        , now
         , initialDataPayload
         , app ctxRef
         )
@@ -247,7 +244,6 @@ searchView settings queryParam@(Just query) = do
             pure $
                 IndexPage
                     ( settings
-                    , now
                     , initialDataPayload
                     , app ctxRef
                     )

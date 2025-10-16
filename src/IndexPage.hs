@@ -35,17 +35,15 @@ import Miso.String (toMisoString)
 import Data.Aeson (ToJSON, encode)
 import Data.ByteString (toStrict)
 import qualified Data.ByteString.Base64 as B64
-import Data.Time (UTCTime)
-import Data.Time.Format.ISO8601 (iso8601Show)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Model  as FE
 
 data IndexPage a = forall b. (ToJSON b, ToView FE.Model a)
-    => IndexPage (JSONSettings, UTCTime, b, a)
+    => IndexPage (JSONSettings, b, a)
 
 instance ToHtml (IndexPage a) where
-    toHtml (IndexPage (settings, now, initial_data, x)) = toHtml
+    toHtml (IndexPage (settings, initial_data, x)) = toHtml
         [ doctype_
         , html_
             []
@@ -61,11 +59,7 @@ instance ToHtml (IndexPage a) where
                     ++
                     (asHtml settings)
                     ++
-                    [ meta_
-                        [ name_ "timestamp"
-                        , content_ $ toMisoString $ iso8601Show now
-                        ]
-                    , script_
+                    [ script_
                         [ class_ "initial-data"
                         , type_ "text/plain"
                         ]
