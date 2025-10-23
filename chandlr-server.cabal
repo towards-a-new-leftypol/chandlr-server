@@ -101,6 +101,10 @@ executable chandlr-server
                     Common.Component.Search
                     Common.Parsing.BodyParser
                     Common.Utils
+                    Common.Admin.Component.DeleteIllegalPost
+                    Common.Admin.DeleteBtn
+                    Common.Component.Modal
+                    Common.Component.PostViews
                     Network.Client
                     IndexPage
 

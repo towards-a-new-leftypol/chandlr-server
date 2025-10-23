@@ -70,7 +70,7 @@ instance ToHtml (IndexPage a) where
                     , js_wasm $ static_root <> "/init.js"
                     -- , js_js $ static_root <> "/all.js"
                     , css $ static_root <> "/style.css"
-                    ]
+                    ] ++ adminCss
                 )
             , body_ [] [ toView @FE.Model x ]
             ]
@@ -78,6 +78,13 @@ instance ToHtml (IndexPage a) where
 
         where
             static_root = static_serve_url_root settings
+
+            adminCss
+                | admin settings =
+                    [ css $ static_root <> "/newstyle.css"
+                    , css $ static_root <> "/newstyle-admin.css"
+                    ]
+                | otherwise = []
 
             css href =
                 link_
