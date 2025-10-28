@@ -12,7 +12,8 @@ let
 
   src = ../../miso;
 
-  miso = haskellPackages.callCabal2nix "miso" src {};
+  #miso = haskellPackages.callCabal2nix "miso" src {};
+  miso = haskellPackages.callCabal2nixWithOptions "miso" src "-f-jsaddle" {};
 in
 
   miso

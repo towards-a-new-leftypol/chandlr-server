@@ -66,7 +66,7 @@ import Common.FrontEnd.Types
 
 type StaticRoute = "static" :> Servant.Raw
 
-type PageType = IndexPage MainComponent
+type PageType = IndexPage
 
 type GET_Result = Get '[HTML] PageType
 

@@ -7,7 +7,7 @@
 
 module IndexPage where
 
-import Miso (ToView (..))
+import Miso ((+>))
 import Miso.Html.Property
     ( charset_
     , name_
@@ -38,11 +38,12 @@ import qualified Data.ByteString.Base64 as B64
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Model  as FE
+import Common.FrontEnd.MainComponent (MainComponent)
 
-data IndexPage a = forall b. (ToJSON b, ToView FE.Model a)
-    => IndexPage (JSONSettings, b, a)
+data IndexPage = forall b. (ToJSON b)
+    => IndexPage (JSONSettings, b, MainComponent)
 
-instance ToHtml (IndexPage a) where
+instance ToHtml IndexPage where
     toHtml (IndexPage (settings, initial_data, x)) = toHtml
         [ doctype_
         , html_
@@ -72,7 +73,7 @@ instance ToHtml (IndexPage a) where
                     , css $ static_root <> "/style.css"
                     ] ++ adminCss
                 )
-            , body_ [] [ toView @FE.Model x ]
+            , body_ [] +> (x :: MainComponent)
             ]
         ]
 
