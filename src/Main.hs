@@ -45,7 +45,7 @@ import qualified Common.Server.JSONSettings as S
 import Common.Network.ClientTypes (GetThreadArgs (..))
 import Common.Component.BodyRender (getPostWithBodies)
 import IndexPage (IndexPage (..))
-import Common.FrontEnd.MainComponent (MainComponent, app)
+import Common.FrontEnd.MainComponent (app)
 import Common.FrontEnd.Types
 
 {-
@@ -70,16 +70,27 @@ type PageType = IndexPage
 
 type GET_Result = Get '[HTML] PageType
 
-type ServerRoutes = FE.Route GET_Result
+type AdminApi
+    =  "admin_"
+    :> "delete_post"
+    :> ReqBody '[JSON] Client.DeleteIllegalPostArgs
+    :> Post '[JSON] Client.DeleteIllegalPostArgs
+
+type ServerRoutes
+    = FE.Route GET_Result -- here add /admin_/delete_post
+    :<|> AdminApi
 
 type API = StaticRoute :<|> ServerRoutes
 
 
 handlers :: JSONSettings -> Server ServerRoutes
 handlers settings
-    =    (catalogView settings)
-    :<|> (threadView settings)
-    :<|> (searchView settings)
+    =
+    (        (catalogView settings)
+        :<|> (threadView settings)
+        :<|> (searchView settings)
+    )
+    :<|> deletePostHandler
 
 
 server :: JSONSettings -> Wai.Application
@@ -254,6 +265,8 @@ searchView settings queryParam@(Just query) = do
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy queryParam
 
+deletePostHandler :: Client.DeleteIllegalPostArgs -> Handler Client.DeleteIllegalPostArgs
+deletePostHandler = undefined
 
 port :: Int
 port = 8888
