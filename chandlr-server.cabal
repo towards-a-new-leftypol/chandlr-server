@@ -107,6 +107,8 @@ executable chandlr-server
                     Common.Component.PostViews
                     Network.Client
                     IndexPage
+                    Admin.DeletePostHandler
+                    Common.Parsing.FlexibleJsonResponseParser
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -138,7 +140,8 @@ executable chandlr-server
                       servant-miso-router,
                       servant-miso-html,
                       network-uri,
-                      base64-bytestring
+                      base64-bytestring,
+                      vector
 
     -- Directories containing source files.
     hs-source-dirs:   src

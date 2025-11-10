@@ -6,6 +6,7 @@ module DataClient
     ( fetchLatest
     , getThread
     , search
+    , getPost
     )
     where
 
@@ -24,6 +25,8 @@ import Common.Network.HttpClient
     )
 import Common.Server.JSONSettings (JSONSettings)
 import Common.Network.SiteType (Site)
+import Common.Parsing.FlexibleJsonResponseParser as Flx
+
 
 fetchLatest :: JSONSettings -> Model -> UTCTime -> IO (Either HttpError [ CatalogPost ])
 fetchLatest settings m t = do
@@ -35,8 +38,9 @@ fetchLatest settings m t = do
             , max_row_read = fetchCount m
             }
 
-getThread :: JSONSettings -> Model -> GetThreadArgs -> IO (Either HttpError [ Site ])
-getThread settings _ GetThreadArgs {..} =
+
+getThread :: JSONSettings -> GetThreadArgs -> IO (Either HttpError [ Site ])
+getThread settings GetThreadArgs {..} = do
     get settings path >>= return . eitherDecodeResponse
 
     where
@@ -46,6 +50,18 @@ getThread settings _ GetThreadArgs {..} =
             <> "&boards.pathpart=eq." <> fromMisoString board_pathpart
             <> "&boards.threads.board_thread_id=eq." <> show board_thread_id
             <> "&boards.threads.posts.order=board_post_id.asc"
+
+
+getPost :: JSONSettings -> Integer -> IO (Either HttpError [ Site ])
+getPost settings post_id = do
+    response <- get settings path
+    return $ sitesFromSSites <$> eitherDecodeResponse response
+
+    where
+        path = "/sites?"
+            <> "select=*,boards!inner(*,threads!inner(*,posts!inner(*,attachments(*))))"
+            <> "&boards.threads.posts.post_id=eq." <> show post_id
+
 
 search :: JSONSettings -> MisoString -> IO (Either HttpError [ CatalogPost ])
 search settings query = do
@@ -57,9 +73,18 @@ search settings query = do
             , max_rows = 200
             }
 
+
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
 eitherDecodeResponse (Right bs) =
     case eitherDecode bs of
         Right val -> Right val
         Left err -> Left $ StatusCodeError 500 $ LC8.pack $ "Failed to decode JSON: " ++ err ++ " " ++ show bs
+
+
+siteFromSSite :: Flx.SSite -> Site
+siteFromSSite (SSite s) = s
+
+
+sitesFromSSites :: [ Flx.SSite ] -> [ Site ]
+sitesFromSSites = map siteFromSSite

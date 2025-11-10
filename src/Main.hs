@@ -47,6 +47,7 @@ import Common.Component.BodyRender (getPostWithBodies)
 import IndexPage (IndexPage (..))
 import Common.FrontEnd.MainComponent (app)
 import Common.FrontEnd.Types
+import Admin.DeletePostHandler (deletePostHandler)
 
 {-
     :Created By:
@@ -90,7 +91,7 @@ handlers settings
         :<|> (threadView settings)
         :<|> (searchView settings)
     )
-    :<|> deletePostHandler
+    :<|> deletePostHandler (clientSettings settings)
 
 
 server :: JSONSettings -> Wai.Application
@@ -178,7 +179,6 @@ threadView settings website board_pathpart board_thread_id = do
 
         Client.getThread
             (clientSettings settings)
-            (clientModel settings)
             (GetThreadArgs
                 { website = toMisoString website
                 , board_pathpart = toMisoString board_pathpart
@@ -265,8 +265,6 @@ searchView settings queryParam@(Just query) = do
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy queryParam
 
-deletePostHandler :: Client.DeleteIllegalPostArgs -> Handler Client.DeleteIllegalPostArgs
-deletePostHandler = undefined
 
 port :: Int
 port = 8888
