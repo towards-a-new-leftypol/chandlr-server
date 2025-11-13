@@ -48,6 +48,7 @@ import IndexPage (IndexPage (..))
 import Common.FrontEnd.MainComponent (app)
 import Common.FrontEnd.Types
 import Admin.DeletePostHandler (deletePostHandler)
+import qualified Common.Network.SiteType as Site
 
 {-
     :Created By:
@@ -75,7 +76,7 @@ type AdminApi
     =  "admin_"
     :> "delete_post"
     :> ReqBody '[JSON] Client.DeleteIllegalPostArgs
-    :> Post '[JSON] Client.DeleteIllegalPostArgs
+    :> Post '[JSON] [ Site.Site ]
 
 type ServerRoutes
     = FE.Route GET_Result -- here add /admin_/delete_post
@@ -110,7 +111,7 @@ clientSettings (JSONSettings {..}) = S.JSONSettings
     { S.postgrest_url = fromMisoString postgrest_url
     , S.jwt = pack jwt
     , S.backup_read_root = undefined
-    , S.media_root_path = undefined
+    , S.media_root_path = fromMisoString media_root_path
     , S.site_name = undefined
     , S.site_url = undefined
     }

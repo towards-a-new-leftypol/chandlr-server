@@ -37,7 +37,6 @@ import Data.ByteString (toStrict)
 import qualified Data.ByteString.Base64 as B64
 
 import Common.FrontEnd.JSONSettings
-import qualified Common.FrontEnd.Model  as FE
 import Common.FrontEnd.MainComponent (MainComponent)
 
 data IndexPage = forall b. (ToJSON b)

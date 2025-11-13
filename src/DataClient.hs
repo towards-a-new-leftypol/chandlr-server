@@ -6,7 +6,10 @@ module DataClient
     ( fetchLatest
     , getThread
     , search
-    , getPost
+    , getPostById
+    , getAttachmentsByHash
+    , deleteThreads
+    , deletePosts
     )
     where
 
@@ -15,12 +18,14 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LC8
 import Data.Aeson (eitherDecode, encode, FromJSON)
 import Miso.String (fromMisoString, MisoString)
+import Data.List (intercalate)
 
 import Common.Network.CatalogPostType (CatalogPost)
 import Common.Network.ClientTypes
 import Common.Network.HttpClient
     ( post
     , get
+    , delete
     , HttpError (..)
     )
 import Common.Server.JSONSettings (JSONSettings)
@@ -52,8 +57,8 @@ getThread settings GetThreadArgs {..} = do
             <> "&boards.threads.posts.order=board_post_id.asc"
 
 
-getPost :: JSONSettings -> Integer -> IO (Either HttpError [ Site ])
-getPost settings post_id = do
+getPostById :: JSONSettings -> Integer -> IO (Either HttpError [ Site ])
+getPostById settings post_id = do
     response <- get settings path
     return $ sitesFromSSites <$> eitherDecodeResponse response
 
@@ -61,6 +66,20 @@ getPost settings post_id = do
         path = "/sites?"
             <> "select=*,boards!inner(*,threads!inner(*,posts!inner(*,attachments(*))))"
             <> "&boards.threads.posts.post_id=eq." <> show post_id
+
+
+getAttachmentsByHash :: JSONSettings -> [ MisoString ] -> IO (Either HttpError [ Site ])
+getAttachmentsByHash _ [] = return $ Right []
+getAttachmentsByHash settings attachmentHashes = do
+    response <- get settings path
+    return $ sitesFromSSites <$> eitherDecodeResponse response
+
+    where
+        path = "/attachments?"
+            <> "select=*,posts!inner(*,threads!inner(*,boards!inner(*,sites(*))))"
+            <> "&sha256_hash=in.(" <> hashesListStr <> ")"
+
+        hashesListStr = intercalate "," $ map fromMisoString attachmentHashes
 
 
 search :: JSONSettings -> MisoString -> IO (Either HttpError [ CatalogPost ])
@@ -88,3 +107,20 @@ siteFromSSite (SSite s) = s
 
 sitesFromSSites :: [ Flx.SSite ] -> [ Site ]
 sitesFromSSites = map siteFromSSite
+
+
+deleteThreads :: JSONSettings -> [ Integer ] -> IO (Either HttpError LBS.ByteString)
+deleteThreads settings thread_ids =
+    delete settings path False
+
+    where
+        path = "/threads?thread_id=in.(" ++ ids ++ ")"
+        ids :: String = intercalate "," $ map show thread_ids
+
+deletePosts :: JSONSettings -> [ Integer ] -> IO (Either HttpError LBS.ByteString)
+deletePosts settings post_ids =
+    delete settings path False
+
+    where
+        path = "/posts?post_id=in.(" ++ ids ++ ")"
+        ids :: String = intercalate "," $ map show post_ids

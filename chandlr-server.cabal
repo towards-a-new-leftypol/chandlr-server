@@ -141,7 +141,8 @@ executable chandlr-server
                       servant-miso-html,
                       network-uri,
                       base64-bytestring,
-                      vector
+                      vector,
+                      directory
 
     -- Directories containing source files.
     hs-source-dirs:   src
