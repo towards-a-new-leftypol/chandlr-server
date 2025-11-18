@@ -8,9 +8,10 @@ module Admin.DeletePostHandler
 where
 
 import Miso.String (fromMisoString)
-import Servant.Server (Handler)
+import Servant.Server (Handler, err500, ServerError (..))
+import Data.ByteString.Lazy.UTF8 (fromString)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Except (ExceptT (..), runExceptT)
+import Control.Monad.Except (ExceptT(..), runExceptT, throwError)
 import qualified Data.List.NonEmpty as L
 import System.FilePath ((</>), (<.>))
 import qualified System.Directory as Dir
@@ -70,7 +71,7 @@ deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
         return postsToDelete
 
     case result of
-        Left e -> undefined -- TODO: 500 error over here!
+        Left e -> throwError $ err500 { errBody = fromString $ show e }
         Right deletedPostInfo -> return deletedPostInfo
 
 
