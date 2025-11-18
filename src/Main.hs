@@ -15,7 +15,7 @@ import qualified Miso as M
 import Miso.String (toMisoString, fromMisoString)
 import Miso.Router (parseURI)
 import Servant.Miso.Html (HTML)
-import           Data.Proxy
+import Data.Proxy
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp             as Wai
 import qualified Network.Wai.Middleware.RequestLogger as Wai
@@ -26,6 +26,7 @@ import Servant.Server
     , Handler (..)
     , serve
     , err500
+    , err403
     , ServerError (..)
     )
 import qualified Data.ByteString.Lazy as B
@@ -92,7 +93,16 @@ handlers settings
         :<|> (threadView settings)
         :<|> (searchView settings)
     )
-    :<|> deletePostHandler (clientSettings settings)
+    :<|> deleteHandler
+
+    where
+        deleteHandler
+            | admin settings = deletePostHandler (clientSettings settings)
+            | otherwise = const $ throwError err403
+            -- this is a shitty attempt at security tbh
+            -- the idea is that you launch one server with admin false and
+            -- route that to users, and you launch another instance that's
+            -- behind an authenticating proxy for mods.
 
 
 server :: JSONSettings -> Wai.Application
