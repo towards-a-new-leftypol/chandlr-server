@@ -58,7 +58,7 @@ deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
                 putStrLn $ "Deleting " ++ show (length threadInfo) ++ " threads."
                 mapM_ (rmThreadDir . fst) threadInfo
 
-            -- _ <- ExceptT $ Client.deleteThreads settings $ map snd threadInfo
+            _ <- ExceptT $ Client.deleteThreads settings $ map snd threadInfo
             return ()
 
         liftIO $ do
@@ -66,7 +66,7 @@ deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
             mapM_ deleteAttachmentPair (concatMap (attachmentPathPairs settings) attachments)
 
         let postIds = concatMap collectPostIds postsToDelete
-        -- _ <- ExceptT $ Client.deletePosts settings postIds
+        _ <- ExceptT $ Client.deletePosts settings postIds
 
         return postsToDelete
 
@@ -128,7 +128,7 @@ deleteAttachmentPair (mainPath, maybeThumbPath) = do
 
     delete :: FilePath -> IO ()
     delete p = do
-        -- Dir.removeFile p -- TODO: uncomment when ready
+        Dir.removeFile p
         putStrLn $ "Deleted " <> p
 
 
@@ -162,5 +162,5 @@ rmThreadDir :: FilePath -> IO ()
 rmThreadDir p = do
     exists <- doesDirectoryExist p
     when exists $ do
-        -- removeDirectoryRecursive p -- TODO: uncomment when ready
+        removeDirectoryRecursive p
         putStrLn $ "Removed " <> p
