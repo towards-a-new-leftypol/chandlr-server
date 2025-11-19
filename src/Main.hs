@@ -153,21 +153,23 @@ routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . ("/" <>) 
 -- endpointUrl = routeLinkToURI . serverRouteLink
 
 
-catalogView :: JSONSettings -> Handler PageType
-catalogView settings = do
-    now <- liftIO getCurrentTime
+catalogView :: JSONSettings -> Maybe String -> Handler PageType
+catalogView settings t = do
+    obsrvrTime <- case t of
+        Nothing -> liftIO getCurrentTime
+        Just time -> return $ read time
 
     catalog_results <- liftIO $ do
         Client.fetchLatest
             (clientSettings settings)
             (clientModel settings)
-            now
+            obsrvrTime
 
     case catalog_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
         Right posts -> do
             let initialData = CatalogData posts
-            let initialDataPayload = InitialDataPayload now initialData
+            let initialDataPayload = InitialDataPayload obsrvrTime initialData
             let ctx = AppInitCtx uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
@@ -180,8 +182,11 @@ catalogView settings = do
                     )
 
     where
+        proxy :: Proxy (FE.R_Latest GET_Result)
+        proxy = Proxy
+
         uri :: M.URI
-        uri = (routeLinkToURI . serverRouteLink) (Proxy :: Proxy (FE.R_Latest GET_Result))
+        uri = routeLinkToURI $ serverRouteLink proxy t
 
 
 threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
