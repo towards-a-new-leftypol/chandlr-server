@@ -67,7 +67,8 @@ instance ToHtml IndexPage where
 
                     , title_ [] [ "Chandlr" ]
 
-                    , js_wasm $ static_root <> "/init.js"
+                    , jsm $ static_root <> "/profile.js"
+                    , jsm $ static_root <> "/init.js"
                     -- , js_js $ static_root <> "/all.js"
                     , css $ static_root <> "/style.css"
                     ] ++ adminCss
@@ -93,7 +94,7 @@ instance ToHtml IndexPage where
                     , href_ $ toMisoString href
                     ]
 
-            js_wasm href =
+            jsm href =
                 script_
                     [ type_ "module"
                     , src_ $ toMisoString href
