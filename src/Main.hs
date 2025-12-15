@@ -37,6 +37,9 @@ import Data.Time.Clock (getCurrentTime)
 import Control.Monad.Except (throwError)
 import Data.Either (fromRight)
 import Data.IORef (newIORef)
+import System.Environment (lookupEnv)
+import Data.Maybe (fromMaybe)
+import Text.Read (readMaybe)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -282,8 +285,8 @@ searchView settings queryParam@(Just query) = do
         uri = routeLinkToURI $ serverRouteLink proxy queryParam
 
 
-port :: Int
-port = 8888
+defaultPort :: Int
+defaultPort = 8888
 
 
 newtype CliArgs = CliArgs
@@ -314,6 +317,9 @@ main :: IO ()
 main = do
     settings <- getSettings
     print settings
+
+    portStr <- lookupEnv "PORT"
+    let port = fromMaybe defaultPort (readMaybe =<< portStr)
 
     putStrLn $ "Serving front-end on port " ++ show port
 
