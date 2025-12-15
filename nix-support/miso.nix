@@ -6,8 +6,8 @@ let
   src = nixpkgs.fetchFromGitHub {
     owner = "dmjio";
     repo = "miso";
-    rev = "65db9a6b3cc3391157787639abc9b6bdf45c80f8";
-    sha256 = "sha256-C90aSeyOP565+HguZtf2tZ+tUXE23xWghcWTB1+I+IA=";
+    rev = "2e3f27f247025cf397bc413963edea105fa787d4";
+    sha256 = "sha256-Sk7rf5rp9T+lkS4WW5saC18kyliqcCkMu7VpbMTPt/I=";
   };
 
   #src = ../../miso;
