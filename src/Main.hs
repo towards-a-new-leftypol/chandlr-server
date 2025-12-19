@@ -173,7 +173,7 @@ catalogView settings t = do
         Right posts -> do
             let initialData = CatalogData posts
             let initialDataPayload = InitialDataPayload obsrvrTime initialData
-            let ctx = AppInitCtx uri settings initialDataPayload
+            let ctx = AppInitCtx True uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -214,7 +214,7 @@ threadView settings website board_pathpart board_thread_id = do
             let postsWithBodies    = getPostWithBodies s
             let threadData         = ThreadData s postsWithBodies
             let initialDataPayload = InitialDataPayload now threadData
-            let ctx                = AppInitCtx uri settings initialDataPayload
+            let ctx                = AppInitCtx True uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -238,7 +238,7 @@ searchView settings Nothing = do
     now <- liftIO getCurrentTime
 
     let initialDataPayload = InitialDataPayload now (SearchData [])
-    let ctx = AppInitCtx uri settings initialDataPayload
+    let ctx = AppInitCtx True uri settings initialDataPayload
 
     ctxRef <- liftIO $ newIORef ctx
 
@@ -267,7 +267,7 @@ searchView settings queryParam@(Just query) = do
         Right posts -> do
             let initialData = SearchData posts
             let initialDataPayload = InitialDataPayload now initialData
-            let ctx = AppInitCtx uri settings initialDataPayload
+            let ctx = AppInitCtx True uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 

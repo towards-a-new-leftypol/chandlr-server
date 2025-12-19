@@ -7,7 +7,7 @@
 
 module IndexPage where
 
-import Miso ((+>))
+import Miso (mount)
 import Miso.Html.Property
     ( charset_
     , name_
@@ -17,8 +17,6 @@ import Miso.Html.Property
     , type_
     , class_
     , src_
-    , language_
-    , defer_
     )
 import Miso.Html
     ( ToHtml (..)
@@ -69,11 +67,10 @@ instance ToHtml IndexPage where
 
                     , jsm $ static_root <> "/profile.js"
                     , jsm $ static_root <> "/init.js"
-                    -- , js_js $ static_root <> "/all.js"
                     , css $ static_root <> "/style.css"
                     ] ++ adminCss
                 )
-            , body_ [] +> (x :: MainComponent)
+            , body_ [] [ mount (x :: MainComponent) ]
             ]
         ]
 
@@ -100,13 +97,3 @@ instance ToHtml IndexPage where
                     , src_ $ toMisoString href
                     ]
                     ""
-
-            js_js href =
-                script_
-                    [ language_ "javascript"
-                    , src_ $ toMisoString href
-                    , defer_ "true"
-                    ]
-                    ""
-
-
