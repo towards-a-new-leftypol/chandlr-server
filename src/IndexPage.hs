@@ -7,7 +7,7 @@
 
 module IndexPage where
 
-import Miso (mount)
+import Miso (mount_)
 import Miso.Html.Property
     ( charset_
     , name_
@@ -66,11 +66,11 @@ instance ToHtml IndexPage where
                     , title_ [] [ "Chandlr" ]
 
                     , jsm $ static_root <> "/profile.js"
-                    , jsm $ static_root <> "/init.js"
+                    , jsm $ static_root <> "/init_multi.js"
                     , css $ static_root <> "/style.css"
                     ] ++ adminCss
                 )
-            , body_ [] [ mount (x :: MainComponent) ]
+            , body_ [] [ mount_ (x :: MainComponent) ]
             ]
         ]
 
