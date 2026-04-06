@@ -109,7 +109,6 @@ executable chandlr-server
                     IndexPage
                     Admin.DeletePostHandler
                     Common.Parsing.FlexibleJsonResponseParser
-                    Common.MisoAeson
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -142,9 +141,7 @@ executable chandlr-server
                       servant-miso-html,
                       network-uri,
                       base64-bytestring,
-                      vector,
-                      directory,
-                      miso-aeson
+                      directory
 
     -- Directories containing source files.
     hs-source-dirs:   src

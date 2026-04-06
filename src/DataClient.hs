@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <&>" #-}
 
@@ -15,10 +16,10 @@ module DataClient
 
 import Data.Time.Clock (UTCTime)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Lazy.Char8 as LC8
-import Data.Aeson (eitherDecode, encode, FromJSON)
+import Miso.JSON (eitherDecode, encode, FromJSON)
 import Miso.String (fromMisoString, MisoString)
 import Data.List (intercalate)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8Lenient)
 
 import Common.Network.CatalogPostType (CatalogPost)
 import Common.Network.ClientTypes
@@ -38,7 +39,7 @@ fetchLatest settings m t = do
     post settings "/rpc/fetch_catalog" payload False >>= return . eitherDecodeResponse
 
     where
-        payload = encode FetchCatalogArgs
+        payload = LBS.fromStrict $ encodeUtf8 $ encode FetchCatalogArgs
             { max_time = t
             , max_row_read = fetchCount m
             }
@@ -87,7 +88,7 @@ search settings query = do
     post settings "/rpc/search_posts" payload False >>= return . eitherDecodeResponse
 
     where
-        payload = encode SearchPostsArgs
+        payload = LBS.fromStrict $ encodeUtf8 $ encode SearchPostsArgs
             { search_text = query
             , max_rows = 200
             }
@@ -96,9 +97,13 @@ search settings query = do
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
 eitherDecodeResponse (Right bs) =
-    case eitherDecode bs of
+    case eitherDecode (decodeUtf8Lenient $ LBS.toStrict bs) of
         Right val -> Right val
-        Left err -> Left $ StatusCodeError 500 $ LC8.pack $ "Failed to decode JSON: " ++ err ++ " " ++ show bs
+        Left err -> Left $ StatusCodeError 500 $
+                "Failed to decode JSON: "
+                <> LBS.fromStrict (encodeUtf8 err)
+                <> " "
+                <> bs
 
 
 siteFromSSite :: Flx.SSite -> Site

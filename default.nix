@@ -6,7 +6,6 @@ let
   servant-miso-html = import ./nix-support/servant-miso-html.nix { inherit nixpkgs; };
   servant-miso-router = import ./nix-support/servant-miso-router.nix { inherit nixpkgs; };
   miso = import ./nix-support/miso.nix { inherit nixpkgs; };
-  miso-aeson = import ./nix-support/miso-aeson.nix { inherit nixpkgs; };
 
   drv = nixpkgs.haskellPackages.callCabal2nix "chandlr-server" ./. {
     #http-conduit = http-conduit.http-conduit;
@@ -14,7 +13,6 @@ let
     miso = miso;
     servant-miso-router = servant-miso-router;
     servant-miso-html = servant-miso-html;
-    miso-aeson = miso-aeson;
   };
 
   env = drv.env.overrideAttrs (oldAttrs: {
