@@ -33,10 +33,14 @@ import Common.Server.JSONSettings (JSONSettings)
 import Common.Network.SiteType (Site)
 import Common.Parsing.FlexibleJsonResponseParser as Flx
 
+import Debug
 
 fetchLatest :: JSONSettings -> Model -> UTCTime -> IO (Either HttpError [ CatalogPost ])
 fetchLatest settings m t = do
-    post settings "/rpc/fetch_catalog" payload False >>= return . eitherDecodeResponse
+    dbg "fetchLatest pre-post"
+    result <- post settings "/rpc/fetch_catalog" payload False >>= return . eitherDecodeResponse
+    dbg "fetchLatest post-post"
+    return result
 
     where
         payload = LBS.fromStrict $ encodeUtf8 $ encode FetchCatalogArgs
@@ -96,9 +100,9 @@ search settings query = do
 
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
-eitherDecodeResponse (Right bs) =
-    case eitherDecode (decodeUtf8Lenient $ LBS.toStrict bs) of
-        Right val -> Right val
+eitherDecodeResponse (Right bs) = timePure "eitherDecodeResponse" $ \() ->
+    case (timePure "eitherDecodeResponse eitherDecode" $ \() -> eitherDecode (timePure "eitherDecode decodeUtf8Lenient" $ \() -> decodeUtf8Lenient $ LBS.toStrict bs)) of
+        Right val -> Right  $ timePure "eitherDecodeResponse give answer" $ \() -> val
         Left err -> Left $ StatusCodeError 500 $
                 "Failed to decode JSON: "
                 <> LBS.fromStrict (encodeUtf8 err)

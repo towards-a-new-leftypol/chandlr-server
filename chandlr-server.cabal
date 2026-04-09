@@ -109,6 +109,7 @@ executable chandlr-server
                     IndexPage
                     Admin.DeletePostHandler
                     Common.Parsing.FlexibleJsonResponseParser
+                    Debug
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -142,6 +143,29 @@ executable chandlr-server
                       network-uri,
                       base64-bytestring,
                       directory
+
+    -- Directories containing source files.
+    hs-source-dirs:   src
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+
+executable jsonbench
+    -- Import common warning flags.
+    import:           warnings
+    ghc-options:      -threaded -fprof-auto
+
+    -- .hs or .lhs file containing the Main module.
+    main-is:          JsonBench.hs
+
+    -- Other library packages from which modules are imported.
+    build-depends:    base,
+                      text,
+                      time,
+                      aeson,
+                      miso,
+                      bytestring,
+                      deepseq
 
     -- Directories containing source files.
     hs-source-dirs:   src

@@ -61,6 +61,9 @@ import qualified Common.Network.ThreadType as Thread
 import qualified Common.Network.PostType as Post
 import qualified Common.AttachmentType as Attachment
 
+import Debug (dbg)
+import Control.Exception (evaluate)
+
 {-
     :Created By:
       ___________________________              _____    _______________________
@@ -176,19 +179,24 @@ routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . ("/" <>) 
 
 catalogView :: JSONSettings -> Maybe String -> Handler PageType
 catalogView settings t = do
+    liftIO $ dbg "catalogView enter"
     obsrvrTime <- case t of
         Nothing -> liftIO getCurrentTime
         Just time -> return $ read time
 
+    liftIO $ dbg "catalogView getting catalog_results"
     catalog_results <- liftIO $ do
         Client.fetchLatest
             (clientSettings settings)
             (clientModel settings)
             obsrvrTime
+    liftIO $ evaluate catalog_results
+    liftIO $ dbg "catalogView have catalog_results"
 
     case catalog_results of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
         Right posts -> do
+            liftIO $ dbg "catalogView have catalog_results (they're Right posts)"
             let initialData = CatalogData posts
             let initialDataPayload = InitialDataPayload obsrvrTime initialData
             let ctx = AppInitCtx True uri settings initialDataPayload
@@ -333,12 +341,13 @@ getSettings = do
 
 main :: IO ()
 main = do
+    dbg "Start Main"
     settings <- getSettings
     print settings
 
     portStr <- lookupEnv "PORT"
     let port = fromMaybe defaultPort (readMaybe =<< portStr)
 
-    putStrLn $ "Serving front-end on port " ++ show port
+    dbg $ "Serving front-end on port " ++ show port
 
     Wai.run port $ Wai.logStdout (server settings)
