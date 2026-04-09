@@ -42,7 +42,6 @@ import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
-import Orphans
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
 import qualified DataClient as Client
@@ -55,10 +54,6 @@ import Common.FrontEnd.MainComponent (app)
 import Common.FrontEnd.Types
 import Admin.DeletePostHandler (deletePostHandler)
 import qualified Common.Network.SiteType as Site
-import qualified Common.Network.BoardType as Board
-import qualified Common.Network.ThreadType as Thread
-import qualified Common.Network.PostType as Post
-import qualified Common.AttachmentType as Attachment
 
 import Debug (dbg)
 import Control.Exception (evaluate)
