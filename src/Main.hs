@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant bracket" #-}
@@ -34,8 +33,7 @@ import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
 import Data.Text.Encoding (decodeUtf8Lenient)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
-import qualified Miso.JSON
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime)
 import Control.Monad.Except (throwError)
 import Data.Either (fromRight)
@@ -44,6 +42,7 @@ import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
+import Orphans
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
 import qualified DataClient as Client
@@ -85,17 +84,6 @@ type StaticRoute = "static" :> Servant.Raw
 type PageType = IndexPage
 
 type GET_Result = Get '[HTML] PageType
-
-
-instance FromJSON Client.DeleteIllegalPostArgs
-
-instance ToJSON Site.Site
-instance ToJSON Board.Board
-instance ToJSON Thread.Thread
-instance ToJSON Post.Post
-instance ToJSON Attachment.Dimension
-instance ToJSON Attachment.Attachment
-
 
 type AdminApi
     =  "admin_"
@@ -331,8 +319,8 @@ getSettings = do
         exitFailure
     else do
         putStrLn $ "Loading settings from: " ++ filePath
-        content <- decodeUtf8Lenient . B.toStrict <$> B.readFile filePath
-        case Miso.JSON.decode content :: Maybe JSONSettings of
+        content <- B.readFile filePath
+        case decode content :: Maybe JSONSettings of
             Nothing -> do
                 putStrLn "Error: Invalid JSON format."
                 exitFailure

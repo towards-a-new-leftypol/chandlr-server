@@ -30,8 +30,8 @@ import Miso.Html
     )
 import Miso.Html.Element (title_)
 import Miso.String (toMisoString)
-import Miso.JSON (ToJSON, encode)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Aeson (ToJSON, encode)
+import Data.ByteString (toStrict)
 import qualified Data.ByteString.Base64 as B64
 
 import Common.FrontEnd.JSONSettings
@@ -61,7 +61,7 @@ instance ToHtml IndexPage where
                         [ class_ "initial-data"
                         , type_ "text/plain"
                         ]
-                        (toMisoString $ B64.encode $ encodeUtf8 $ encode initial_data)
+                        (toMisoString $ B64.encode $ toStrict $ encode initial_data)
 
                     , title_ [] [ "Chandlr" ]
 

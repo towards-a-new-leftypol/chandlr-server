@@ -16,10 +16,11 @@ module DataClient
 
 import Data.Time.Clock (UTCTime)
 import qualified Data.ByteString.Lazy as LBS
-import Miso.JSON (eitherDecode, encode, FromJSON)
+import Data.Aeson (eitherDecode, encode, FromJSON)
 import Miso.String (fromMisoString, MisoString)
 import Data.List (intercalate)
 import Data.Text.Encoding (encodeUtf8, decodeUtf8Lenient)
+import qualified Data.ByteString.Lazy.Char8 as LC8
 
 import Common.Network.CatalogPostType (CatalogPost)
 import Common.Network.ClientTypes
@@ -32,6 +33,7 @@ import Common.Network.HttpClient
 import Common.Server.JSONSettings (JSONSettings)
 import Common.Network.SiteType (Site)
 import Common.Parsing.FlexibleJsonResponseParser as Flx
+import Orphans
 
 import Debug
 
@@ -43,7 +45,7 @@ fetchLatest settings m t = do
     return result
 
     where
-        payload = LBS.fromStrict $ encodeUtf8 $ encode FetchCatalogArgs
+        payload = encode FetchCatalogArgs
             { max_time = t
             , max_row_read = fetchCount m
             }
@@ -92,7 +94,7 @@ search settings query = do
     post settings "/rpc/search_posts" payload False >>= return . eitherDecodeResponse
 
     where
-        payload = LBS.fromStrict $ encodeUtf8 $ encode SearchPostsArgs
+        payload = encode SearchPostsArgs
             { search_text = query
             , max_rows = 200
             }
@@ -101,13 +103,9 @@ search settings query = do
 eitherDecodeResponse :: (FromJSON a) => Either HttpError LBS.ByteString -> Either HttpError a
 eitherDecodeResponse (Left err) = Left err
 eitherDecodeResponse (Right bs) = timePure "eitherDecodeResponse" $ \() ->
-    case (timePure "eitherDecodeResponse eitherDecode" $ \() -> eitherDecode (timePure "eitherDecode decodeUtf8Lenient" $ \() -> decodeUtf8Lenient $ LBS.toStrict bs)) of
+    case (timePure "eitherDecodeResponse eitherDecode" $ \() -> eitherDecode bs) of
         Right val -> Right  $ timePure "eitherDecodeResponse give answer" $ \() -> val
-        Left err -> Left $ StatusCodeError 500 $
-                "Failed to decode JSON: "
-                <> LBS.fromStrict (encodeUtf8 err)
-                <> " "
-                <> bs
+        Left err -> Left $ StatusCodeError 500 $ LC8.pack $ "Failed to decode JSON: " ++ err ++ " " ++ show bs
 
 
 siteFromSSite :: Flx.SSite -> Site
