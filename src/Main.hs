@@ -31,7 +31,6 @@ import Servant.Server
     )
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.UTF8 (fromString)
-import Data.Text.Encoding (decodeUtf8Lenient)
 import System.Console.CmdArgs (cmdArgs, Data, Typeable)
 import Data.Aeson (decode)
 import Data.Time.Clock (getCurrentTime)

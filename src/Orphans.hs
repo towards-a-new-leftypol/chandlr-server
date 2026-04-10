@@ -5,7 +5,7 @@
 module Orphans where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Common.Network.ClientTypes (GetThreadArgs, SearchPostsArgs)
+import Common.Network.ClientTypes (SearchPostsArgs)
 import Common.FrontEnd.Types
 import Common.Network.CatalogPostType (CatalogPost)
 import qualified Common.AttachmentType as Attachment
@@ -17,7 +17,6 @@ import qualified Common.Network.ClientTypes as Client
 import Common.FrontEnd.JSONSettings (JSONSettings)
 import Common.Parsing.PostPartType (PostPart)
 import Common.Parsing.QuoteLinkParser (ParsedURL)
-import Common.Parsing.FlexibleJsonResponseParser as Flx
 
 instance FromJSON Client.DeleteIllegalPostArgs
 instance FromJSON JSONSettings
@@ -28,7 +27,6 @@ instance FromJSON Board.Board
 instance FromJSON Thread.Thread
 instance FromJSON Post.Post
 instance FromJSON Attachment.Attachment
-instance FromJSON Flx.SSite
 
 instance ToJSON Site.Site
 instance ToJSON Board.Board

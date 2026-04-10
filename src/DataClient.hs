@@ -19,7 +19,6 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Aeson (eitherDecode, encode, FromJSON)
 import Miso.String (fromMisoString, MisoString)
 import Data.List (intercalate)
-import Data.Text.Encoding (encodeUtf8, decodeUtf8Lenient)
 import qualified Data.ByteString.Lazy.Char8 as LC8
 
 import Common.Network.CatalogPostType (CatalogPost)
@@ -33,7 +32,6 @@ import Common.Network.HttpClient
 import Common.Server.JSONSettings (JSONSettings)
 import Common.Network.SiteType (Site)
 import Common.Parsing.FlexibleJsonResponseParser as Flx
-import Orphans
 
 import Debug
 
