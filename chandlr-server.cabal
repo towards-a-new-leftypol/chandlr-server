@@ -111,6 +111,7 @@ executable chandlr-server
                     Common.Parsing.FlexibleJsonResponseParser
                     Orphans
                     Debug
+                    Common.Component.NavigationBar.View
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

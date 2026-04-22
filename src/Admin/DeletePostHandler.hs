@@ -79,7 +79,7 @@ attachmentsFromSite :: Site.Site -> [ A.Attachment ]
 attachmentsFromSite
     = concatMap P.attachments
     . concatMap (L.toList . T.posts)
-    . concatMap (L.toList . B.threads)
+    . concatMap B.threads
     . Site.boards
 
 
@@ -92,7 +92,7 @@ attachmentPathPairs settings site =
                 threadDir </> ("thumbnail_" ++ fileName <.> fromMisoString ext)
       )
     | board      <- L.toList (Site.boards site)
-    , thread     <- L.toList (B.threads board)
+    , thread     <- B.threads board
     , post       <- L.toList (T.posts thread)
     , attachment <- P.attachments post
     , let fileName = fromMisoString (A.board_filename attachment)
@@ -138,7 +138,7 @@ findThreadInfo settings site =
       , T.thread_id thread
       )
     | board  <- L.toList (Site.boards site)
-    , thread <- L.toList (B.threads board)
+    , thread <- B.threads board
     , post   <- L.toList (T.posts thread)
     , P.board_post_id post == T.board_thread_id thread  -- OP condition
     , let threadDir =
@@ -153,7 +153,7 @@ collectPostIds :: Site.Site -> [ Integer ]
 collectPostIds site =
     [ P.post_id post
     | board  <- L.toList (Site.boards site)
-    , thread <- L.toList (B.threads board)
+    , thread <- B.threads board
     , post   <- L.toList (T.posts thread)
     ]
 
