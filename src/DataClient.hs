@@ -1,5 +1,5 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <&>" #-}
 
@@ -11,15 +11,16 @@ module DataClient
     , getAttachmentsByHash
     , deleteThreads
     , deletePosts
+    , getAllSitesAndBoards
     )
     where
 
 import Data.Time.Clock (UTCTime)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Aeson (eitherDecode, encode, FromJSON)
-import Miso.String (fromMisoString, MisoString)
-import Data.List (intercalate)
 import qualified Data.ByteString.Lazy.Char8 as LC8
+import qualified Data.List
+import Miso.String (fromMisoString, toMisoString, MisoString, intercalate)
 
 import Common.Network.CatalogPostType (CatalogPost)
 import Common.Network.ClientTypes
@@ -49,16 +50,25 @@ fetchLatest settings m t = do
             }
 
 
+getAllSitesAndBoards :: JSONSettings -> IO (Either HttpError [ Site ])
+getAllSitesAndBoards settings = do
+    response <- get settings path
+    return $ sitesFromSSites <$> eitherDecodeResponse response
+
+    where
+        path = "/sites?select=*,boards(*)"
+
+
 getThread :: JSONSettings -> GetThreadArgs -> IO (Either HttpError [ Site ])
 getThread settings GetThreadArgs {..} = do
     get settings path >>= return . eitherDecodeResponse
 
     where
-        path = "/sites?"
+        path = fromMisoString $ "/sites?"
             <> "select=*,boards(*,threads(*,posts(*,attachments(*))))"
-            <> "&name=eq." <> fromMisoString website
-            <> "&boards.pathpart=eq." <> fromMisoString board_pathpart
-            <> "&boards.threads.board_thread_id=eq." <> show board_thread_id
+            <> "&name=eq." <> website
+            <> "&boards.pathpart=eq." <> board_pathpart
+            <> "&boards.threads.board_thread_id=eq." <> toMisoString (show board_thread_id)
             <> "&boards.threads.posts.order=board_post_id.asc"
 
 
@@ -80,15 +90,16 @@ getAttachmentsByHash settings attachmentHashes = do
     return $ sitesFromSSites <$> eitherDecodeResponse response
 
     where
-        path = "/attachments?"
+        path = fromMisoString $ "/attachments?"
             <> "select=*,posts!inner(*,threads!inner(*,boards!inner(*,sites(*))))"
             <> "&sha256_hash=in.(" <> hashesListStr <> ")"
 
-        hashesListStr = intercalate "," $ map fromMisoString attachmentHashes
+        hashesListStr = toMisoString $ intercalate "," $ attachmentHashes
 
 
-search :: JSONSettings -> MisoString -> IO (Either HttpError [ CatalogPost ])
+search :: JSONSettings -> String -> IO (Either HttpError [ CatalogPost ])
 search settings query = do
+    putStrLn "DataClient.search calling post"
     post settings "/rpc/search_posts" payload False >>= return . eitherDecodeResponse
 
     where
@@ -120,7 +131,7 @@ deleteThreads settings thread_ids =
 
     where
         path = "/threads?thread_id=in.(" ++ ids ++ ")"
-        ids :: String = intercalate "," $ map show thread_ids
+        ids :: String = Data.List.intercalate "," $ map show thread_ids
 
 deletePosts :: JSONSettings -> [ Integer ] -> IO (Either HttpError LBS.ByteString)
 deletePosts settings post_ids =
@@ -128,4 +139,4 @@ deletePosts settings post_ids =
 
     where
         path = "/posts?post_id=in.(" ++ ids ++ ")"
-        ids :: String = intercalate "," $ map show post_ids
+        ids :: String = Data.List.intercalate "," $ map show post_ids

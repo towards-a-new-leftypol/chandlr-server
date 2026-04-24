@@ -145,7 +145,8 @@ executable chandlr-server
                       network-uri,
                       base64-bytestring,
                       directory,
-                      vector
+                      vector,
+                      async
 
     -- Directories containing source files.
     hs-source-dirs:   src

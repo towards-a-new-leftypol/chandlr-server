@@ -40,11 +40,13 @@ import Data.IORef (newIORef)
 import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
+import Control.Concurrent.Async (concurrently)
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
 import qualified DataClient as Client
 import qualified Common.Network.ClientTypes as Client
+import qualified Common.Network.HttpClient as Client
 import qualified Common.Server.JSONSettings as S
 import Common.Network.ClientTypes (GetThreadArgs (..))
 import Common.Component.BodyRender (getPostWithBodies)
@@ -83,7 +85,7 @@ type AdminApi
     :> Post '[JSON] [ Site.Site ]
 
 type ServerRoutes
-    = FE.Route GET_Result -- here add /admin_/delete_post
+    = FE.Route GET_Result
     :<|> AdminApi
 
 type API = StaticRoute :<|> ServerRoutes
@@ -162,17 +164,19 @@ catalogView settings t = do
         Nothing -> liftIO getCurrentTime
         Just time -> return $ read time
 
-    catalog_results <- liftIO $ do
-        Client.fetchLatest
-            (clientSettings settings)
-            (clientModel settings)
-            obsrvrTime
+    catalogResults <-
+            let servSettings = clientSettings settings
+            in liftIO $ loadSitesAndBoardsAndData servSettings $
+                Client.fetchLatest
+                    servSettings
+                    (clientModel settings)
+                    obsrvrTime
 
-    case catalog_results of
+    case catalogResults of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right posts -> do
+        Right (posts, sites) -> do
             let initialData = CatalogData posts
-            let initialDataPayload = InitialDataPayload obsrvrTime initialData
+            let initialDataPayload = InitialDataPayload obsrvrTime initialData sites
             let ctx = AppInitCtx True uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
@@ -194,26 +198,27 @@ catalogView settings t = do
 
 threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
 threadView settings website board_pathpart board_thread_id = do
-    thread_results <- liftIO $ do
-
-        Client.getThread
-            (clientSettings settings)
-            (GetThreadArgs
-                { website = toMisoString website
-                , board_pathpart = toMisoString board_pathpart
-                , board_thread_id = board_thread_id
-                }
-            )
+    threadResults <-
+            let servSettings = clientSettings settings
+            in liftIO $ loadSitesAndBoardsAndData servSettings $
+                Client.getThread
+                    servSettings
+                    (GetThreadArgs
+                        { website = toMisoString website
+                        , board_pathpart = toMisoString board_pathpart
+                        , board_thread_id = board_thread_id
+                        }
+                    )
 
     now <- liftIO getCurrentTime
 
-    case thread_results of
+    case threadResults of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right site -> do
+        Right (site, sites) -> do
             let s                  = head site
             let postsWithBodies    = getPostWithBodies s
             let threadData         = ThreadData s postsWithBodies
-            let initialDataPayload = InitialDataPayload now threadData
+            let initialDataPayload = InitialDataPayload now threadData sites
             let ctx                = AppInitCtx True uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
@@ -235,9 +240,19 @@ threadView settings website board_pathpart board_thread_id = do
 
 searchView :: JSONSettings -> Maybe String -> Handler PageType
 searchView settings Nothing = do
+    liftIO $ putStrLn "Main - inside searchView - DO NOT HAVE queryParam"
     now <- liftIO getCurrentTime
 
-    let initialDataPayload = InitialDataPayload now (SearchData [])
+    sitesResult <- liftIO $
+        Client.getAllSitesAndBoards (clientSettings settings)
+
+    sites <- case sitesResult of
+        Left err -> do
+            liftIO $ putStrLn $ "Loading Sites and Boards failed: " ++ show err
+            return fakeSitesForError
+        Right s -> return s
+
+    let initialDataPayload = InitialDataPayload now (SearchData []) sites
     let ctx = AppInitCtx True uri settings initialDataPayload
 
     ctxRef <- liftIO $ newIORef ctx
@@ -255,19 +270,23 @@ searchView settings Nothing = do
         uri = routeLinkToURI $ serverRouteLink proxy Nothing
 
 searchView settings queryParam@(Just query) = do
+    liftIO $ putStrLn "Main - inside searchView - have queryParam"
     now <- liftIO getCurrentTime
 
-    searchResult <- liftIO $ do
-        Client.search
-            (clientSettings settings)
-            (toMisoString query)
+    searchResult <-
+            let servSettings = clientSettings settings
+            in liftIO $ loadSitesAndBoardsAndData servSettings $
+                Client.search
+                    servSettings
+                    query
 
     case searchResult of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
-        Right posts -> do
+        Right (posts, sites) -> do
+            liftIO $ putStrLn $ "searchView - number of search results: " ++ show (length posts)
             let initialData = SearchData posts
-            let initialDataPayload = InitialDataPayload now initialData
-            let ctx = AppInitCtx True uri settings initialDataPayload
+            let initialDataPayload = InitialDataPayload now initialData sites
+            let ctx = AppInitCtx True uri settings $ initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -283,6 +302,30 @@ searchView settings queryParam@(Just query) = do
 
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy queryParam
+
+
+fakeSitesForError :: [ Site.Site ]
+fakeSitesForError = Site.emptySite { Site.name = "ERROR LOADING SITES" } : []
+
+
+loadSitesAndBoardsAndData
+    :: S.JSONSettings
+    -> IO (Either Client.HttpError a)
+    -> IO (Either Client.HttpError (a, [ Site.Site ]))
+loadSitesAndBoardsAndData settings otherHttpClientAction = do
+    (a, b) <- concurrently otherHttpClientAction $ do
+        Client.getAllSitesAndBoards settings
+
+    case b of
+        Left err -> do
+            putStrLn $ "Loading Sites and Boards failed: " ++ show err
+            return $ withSites a fakeSitesForError
+
+        Right sites -> return $ withSites a sites
+
+    where
+        withSites :: Either a b -> [ Site.Site ] -> Either a (b, [ Site.Site ])
+        withSites a sites = fmap (,sites) a
 
 
 defaultPort :: Int
