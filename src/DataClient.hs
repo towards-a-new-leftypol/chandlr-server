@@ -12,6 +12,7 @@ module DataClient
     , deleteThreads
     , deletePosts
     , getAllSitesAndBoards
+    , getBoardInfo
     )
     where
 
@@ -36,17 +37,18 @@ import Common.Parsing.FlexibleJsonResponseParser as Flx
 
 import Debug
 
-fetchLatest :: JSONSettings -> Model -> UTCTime -> IO (Either HttpError [ CatalogPost ])
-fetchLatest settings m t = do
+fetchLatest :: JSONSettings -> Model -> UTCTime -> Maybe [ Int ] -> IO (Either HttpError [ CatalogPost ])
+fetchLatest settings m t boards = do
     dbg "fetchLatest pre-post"
-    result <- post settings "/rpc/fetch_catalog" payload False >>= return . eitherDecodeResponse
+    result <- post settings "/rpc/fetch_catalog2" payload False >>= return . eitherDecodeResponse
     dbg "fetchLatest post-post"
     return result
 
     where
         payload = encode FetchCatalogArgs
-            { max_time = t
-            , max_row_read = fetchCount m
+            { selected_time = t
+            , thread_count = fetchCount m
+            , board_ids = boards
             }
 
 
@@ -57,6 +59,23 @@ getAllSitesAndBoards settings = do
 
     where
         path = "/sites?select=*,boards(*)"
+
+
+getBoardInfo
+    :: JSONSettings
+    -> MisoString
+    -> MisoString
+    -> IO (Either HttpError [ Site ])
+getBoardInfo settings site_name board_pathpart = do
+    response <- get settings path
+    return $ sitesFromSSites <$> eitherDecodeResponse response
+
+    where
+        path
+            =  fromMisoString
+            $  "/sites?select=*,boards(*)"
+            <> "&name=eq." <> site_name
+            <> "&boards.pathpart=eq." <> board_pathpart
 
 
 getThread :: JSONSettings -> GetThreadArgs -> IO (Either HttpError [ Site ])
@@ -104,7 +123,7 @@ search settings query = do
 
     where
         payload = encode SearchPostsArgs
-            { search_text = query
+            { search_text = toMisoString $ query
             , max_rows = 200
             }
 
@@ -132,6 +151,7 @@ deleteThreads settings thread_ids =
     where
         path = "/threads?thread_id=in.(" ++ ids ++ ")"
         ids :: String = Data.List.intercalate "," $ map show thread_ids
+
 
 deletePosts :: JSONSettings -> [ Integer ] -> IO (Either HttpError LBS.ByteString)
 deletePosts settings post_ids =

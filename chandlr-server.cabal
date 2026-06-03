@@ -112,6 +112,11 @@ executable chandlr-server
                     Orphans
                     Debug
                     Common.Component.NavigationBar.View
+                    Common.Component.NavigationBar
+                    Common.Component.NavigationBar.Action
+                    Common.Component.NavigationBar.Model
+                    Common.Component.NavigationBar.NavMenu
+
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

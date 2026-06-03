@@ -67,6 +67,7 @@ instance ToHtml IndexPage where
 
                     , jsm $ static_root <> "/profile.js"
                     , jsm $ static_root <> "/init_multi.js"
+                    , css $ static_root <> "/newstyle.css"
                     , css $ static_root <> "/style.css"
                     ] ++ adminCss
                 )
@@ -79,8 +80,7 @@ instance ToHtml IndexPage where
 
             adminCss
                 | admin settings =
-                    [ css $ static_root <> "/newstyle.css"
-                    , css $ static_root <> "/newstyle-admin.css"
+                    [ css $ static_root <> "/newstyle-admin.css"
                     ]
                 | otherwise = []
 

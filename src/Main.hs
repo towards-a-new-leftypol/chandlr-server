@@ -27,6 +27,7 @@ import Servant.Server
     , serve
     , err500
     , err403
+    , err404
     , ServerError (..)
     )
 import qualified Data.ByteString.Lazy as B
@@ -41,6 +42,7 @@ import System.Environment (lookupEnv)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 import Control.Concurrent.Async (concurrently)
+import Data.List.NonEmpty (NonEmpty (..))
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -55,6 +57,7 @@ import Common.FrontEnd.MainComponent (app)
 import Common.FrontEnd.Types
 import Admin.DeletePostHandler (deletePostHandler)
 import qualified Common.Network.SiteType as Site
+import qualified Common.Network.BoardType as Board
 
 {-
     :Created By:
@@ -96,6 +99,7 @@ handlers settings
     =
     (        (catalogView settings)
         :<|> (threadView settings)
+        :<|> (boardView settings)
         :<|> (searchView settings)
     )
     :<|> deleteHandler
@@ -171,6 +175,7 @@ catalogView settings t = do
                     servSettings
                     (clientModel settings)
                     obsrvrTime
+                    Nothing
 
     case catalogResults of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
@@ -194,6 +199,58 @@ catalogView settings t = do
 
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy t
+
+
+boardView :: JSONSettings -> Text -> Text -> Handler PageType
+boardView settings site_name board_pathpart = do
+    now <- liftIO getCurrentTime
+
+    let servSettings = clientSettings settings
+
+    boardInfoResult <- liftIO $
+        Client.getBoardInfo servSettings site_name board_pathpart
+
+    case boardInfoResult of
+        Left err ->
+            if is404 err
+            then
+                throwError $ err404 { errBody = fromString $ show err }
+            else
+                throwError $ err500 { errBody = fromString $ show err }
+
+        Right sites -> do
+            catalogResults <- liftIO $ Client.fetchLatest
+                            servSettings
+                            (clientModel settings)
+                            now
+                            (Just [ getOnlyBoardId sites ])
+
+            case catalogResults of
+                Left err -> throwError $ err500 { errBody = fromString $ show err }
+                Right posts -> do
+                    let initialData = CatalogData posts
+                    let initialDataPayload = InitialDataPayload now initialData sites
+                    let ctx = AppInitCtx True uri settings initialDataPayload
+
+                    ctxRef <- liftIO $ newIORef ctx
+
+                    pure $
+                        IndexPage
+                            ( settings
+                            , initialDataPayload
+                            , app ctxRef
+                            )
+
+    where
+        proxy :: Proxy (FE.R_Board GET_Result)
+        proxy = Proxy
+
+        uri :: M.URI
+        uri = routeLinkToURI $ serverRouteLink proxy site_name board_pathpart
+
+        getOnlyBoardId :: [ Site.Site ] -> Int
+        getOnlyBoardId ((Site.Site { Site.boards = (b :| _) }) : _) = Board.board_id b
+        getOnlyBoardId _ = error "Expected nonempty list"
 
 
 threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
@@ -355,6 +412,9 @@ getSettings = do
                 exitFailure
             Just settings -> return settings
 
+is404 :: Client.HttpError -> Bool
+is404 (Client.StatusCodeError 404 _) = True
+is404 _ = False
 
 main :: IO ()
 main = do
