@@ -58,6 +58,7 @@ import Common.FrontEnd.Types
 import Admin.DeletePostHandler (deletePostHandler)
 import qualified Common.Network.SiteType as Site
 import qualified Common.Network.BoardType as Board
+import Common.Cookies (CookieJar, getBoardIdsFromCookie)
 
 {-
     :Created By:
@@ -162,8 +163,8 @@ routeLinkToURI = (fromRight (M.URI mempty mempty mempty)) . parseURI . ("/" <>) 
 -- endpointUrl = routeLinkToURI . serverRouteLink
 
 
-catalogView :: JSONSettings -> Maybe String -> Handler PageType
-catalogView settings t = do
+catalogView :: JSONSettings -> Maybe String -> Maybe CookieJar -> Handler PageType
+catalogView settings t cookies = do
     obsrvrTime <- case t of
         Nothing -> liftIO getCurrentTime
         Just time -> return $ read time
@@ -175,7 +176,7 @@ catalogView settings t = do
                     servSettings
                     (clientModel settings)
                     obsrvrTime
-                    Nothing
+                    (cookies >>= getBoardIdsFromCookie)
 
     case catalogResults of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
