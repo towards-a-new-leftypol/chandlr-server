@@ -116,6 +116,8 @@ executable chandlr-server
                     Common.Component.NavigationBar.Action
                     Common.Component.NavigationBar.Model
                     Common.Component.NavigationBar.NavMenu
+                    Common.BitField
+                    Common.Cookies
 
 
     -- LANGUAGE extensions used by modules in this package.
@@ -151,7 +153,9 @@ executable chandlr-server
                       base64-bytestring,
                       directory,
                       vector,
-                      async
+                      async,
+                      cookie,
+                      integer-conversion
 
     -- Directories containing source files.
     hs-source-dirs:   src

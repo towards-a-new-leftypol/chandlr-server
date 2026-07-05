@@ -43,6 +43,7 @@ import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 import Control.Concurrent.Async (concurrently)
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.Set as Set
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
@@ -176,14 +177,14 @@ catalogView settings t cookies = do
                     servSettings
                     (clientModel settings)
                     obsrvrTime
-                    (cookies >>= getBoardIdsFromCookie)
+                    (Set.toList <$> boardIds)
 
     case catalogResults of
         Left err -> throwError $ err500 { errBody = fromString $ show err }
         Right (posts, sites) -> do
             let initialData = CatalogData posts
             let initialDataPayload = InitialDataPayload obsrvrTime initialData sites
-            let ctx = AppInitCtx True uri settings initialDataPayload
+            let ctx = AppInitCtx True boardIds uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -201,9 +202,11 @@ catalogView settings t cookies = do
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy t
 
+        boardIds = cookies >>= getBoardIdsFromCookie
 
-boardView :: JSONSettings -> Text -> Text -> Handler PageType
-boardView settings site_name board_pathpart = do
+
+boardView :: JSONSettings -> Text -> Text -> Maybe CookieJar -> Handler PageType
+boardView settings site_name board_pathpart cookies = do
     now <- liftIO getCurrentTime
 
     let servSettings = clientSettings settings
@@ -231,7 +234,7 @@ boardView settings site_name board_pathpart = do
                 Right posts -> do
                     let initialData = CatalogData posts
                     let initialDataPayload = InitialDataPayload now initialData sites
-                    let ctx = AppInitCtx True uri settings initialDataPayload
+                    let ctx = AppInitCtx True boardIds uri settings initialDataPayload
 
                     ctxRef <- liftIO $ newIORef ctx
 
@@ -253,9 +256,17 @@ boardView settings site_name board_pathpart = do
         getOnlyBoardId ((Site.Site { Site.boards = (b :| _) }) : _) = Board.board_id b
         getOnlyBoardId _ = error "Expected nonempty list"
 
+        boardIds = cookies >>= getBoardIdsFromCookie
 
-threadView :: JSONSettings -> Text -> Text -> FE.BoardThreadId -> Handler PageType
-threadView settings website board_pathpart board_thread_id = do
+
+threadView
+    :: JSONSettings
+    -> Text
+    -> Text
+    -> FE.BoardThreadId
+    -> Maybe CookieJar
+    -> Handler PageType
+threadView settings website board_pathpart board_thread_id cookies = do
     threadResults <-
             let servSettings = clientSettings settings
             in liftIO $ loadSitesAndBoardsAndData servSettings $
@@ -277,7 +288,7 @@ threadView settings website board_pathpart board_thread_id = do
             let postsWithBodies    = getPostWithBodies s
             let threadData         = ThreadData s postsWithBodies
             let initialDataPayload = InitialDataPayload now threadData sites
-            let ctx                = AppInitCtx True uri settings initialDataPayload
+            let ctx                = AppInitCtx True boardIds uri settings initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -295,9 +306,11 @@ threadView settings website board_pathpart board_thread_id = do
         uri = routeLinkToURI $
                 serverRouteLink proxy website board_pathpart board_thread_id
 
+        boardIds = cookies >>= getBoardIdsFromCookie
 
-searchView :: JSONSettings -> Maybe String -> Handler PageType
-searchView settings Nothing = do
+
+searchView :: JSONSettings -> Maybe String -> Maybe CookieJar -> Handler PageType
+searchView settings Nothing cookies = do
     liftIO $ putStrLn "Main - inside searchView - DO NOT HAVE queryParam"
     now <- liftIO getCurrentTime
 
@@ -311,7 +324,7 @@ searchView settings Nothing = do
         Right s -> return s
 
     let initialDataPayload = InitialDataPayload now (SearchData []) sites
-    let ctx = AppInitCtx True uri settings initialDataPayload
+    let ctx = AppInitCtx True boardIds uri settings initialDataPayload
 
     ctxRef <- liftIO $ newIORef ctx
 
@@ -327,7 +340,9 @@ searchView settings Nothing = do
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy Nothing
 
-searchView settings queryParam@(Just query) = do
+        boardIds = cookies >>= getBoardIdsFromCookie
+
+searchView settings queryParam@(Just query) cookies = do
     liftIO $ putStrLn "Main - inside searchView - have queryParam"
     now <- liftIO getCurrentTime
 
@@ -344,7 +359,7 @@ searchView settings queryParam@(Just query) = do
             liftIO $ putStrLn $ "searchView - number of search results: " ++ show (length posts)
             let initialData = SearchData posts
             let initialDataPayload = InitialDataPayload now initialData sites
-            let ctx = AppInitCtx True uri settings $ initialDataPayload
+            let ctx = AppInitCtx True boardIds uri settings $ initialDataPayload
 
             ctxRef <- liftIO $ newIORef ctx
 
@@ -360,6 +375,8 @@ searchView settings queryParam@(Just query) = do
 
         uri :: M.URI
         uri = routeLinkToURI $ serverRouteLink proxy queryParam
+
+        boardIds = cookies >>= getBoardIdsFromCookie
 
 
 fakeSitesForError :: [ Site.Site ]
