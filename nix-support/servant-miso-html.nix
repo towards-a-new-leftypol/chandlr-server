@@ -8,8 +8,8 @@ let
   src = nixpkgs.fetchFromGitHub {
     owner = "haskell-miso";
     repo = "servant-miso-html";
-    rev = "00781d1920795b67e0476b67ed6840c388f29810";
-    sha256 = "sha256-dYPlwSbQ+QXvMeS5tonBVnT9zQGADtohmD/ZAiY/cXA=";
+    rev = "22fd9d18c394f2096ccdeb0558eec6370466c624";
+    sha256 = "sha256-vnUrNnlksTzBgqQwxmm0JD5wrsgQwMZ3faz5Duvc8sY=";
   };
 
   servant-miso-html = haskellPackages.callCabal2nix "servant-miso-html" src {

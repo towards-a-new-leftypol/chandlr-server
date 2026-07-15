@@ -9,8 +9,8 @@ let
   src = nixpkgs.fetchFromGitHub {
     owner = "haskell-miso";
     repo = "servant-miso-router";
-    rev = "0c828e0ba30ee7a446ce8999288b32b7f6425dd1";
-    sha256 = "sha256-2Vkheb2iNDFWNAToO+r8rMY3OAA6LlUtgxiCWRm0wAY=";
+    rev = "c8a3994f14dae4e5c35df0896e0ac961200c1108";
+    sha256 = "sha256-DjfCXTRBl0LDuMVIk75U6BIy/tXwP59xV1NcUhJlizI=";
   };
 
   drv = haskellPackages.callCabal2nix "servant-miso-router" src {
