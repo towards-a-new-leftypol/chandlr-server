@@ -8,4 +8,4 @@ import Miso (Component, component, vfrag)
 import Common.Network.ClientTypes (Model (Uninitialized), Action)
 
 app :: Component parent props Model Action
-app = component Uninitialized (const $ return ()) (const $ const $ vfrag [])
+app = component Uninitialized (const $ return ()) (const $ const $ const $ vfrag [])
