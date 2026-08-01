@@ -3,7 +3,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <&>" #-}
 
-module DataClient
+module Network.DataClient
     ( fetchLatest
     , getThread
     , search

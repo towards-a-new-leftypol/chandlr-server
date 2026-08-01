@@ -22,7 +22,7 @@ import Control.Monad (when, unless)
 import System.Directory (doesDirectoryExist, removeDirectoryRecursive)
 
 import qualified Common.Network.ClientTypes as Client
-import qualified DataClient as Client
+import qualified Network.DataClient as Client
 import Common.Server.JSONSettings (JSONSettings, media_root_path)
 import qualified Common.Network.SiteType as Site
 import qualified Common.Network.BoardType as B

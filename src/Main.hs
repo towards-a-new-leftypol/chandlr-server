@@ -47,7 +47,7 @@ import qualified Data.Set as Set
 
 import Common.FrontEnd.JSONSettings
 import qualified Common.FrontEnd.Routes as FE
-import qualified DataClient as Client
+import qualified Network.DataClient as Client
 import qualified Common.Network.ClientTypes as Client
 import qualified Common.Network.HttpClient as Client
 import qualified Common.Server.JSONSettings as S
