@@ -13,6 +13,7 @@ module Network.DataClient
     , deletePosts
     , getAllSitesAndBoards
     , getBoardInfo
+    , eitherDecodeResponse
     )
     where
 
@@ -30,6 +31,7 @@ import Common.Network.HttpClient
     , get
     , delete
     , HttpError (..)
+    , defaultOptions
     )
 import Common.Server.JSONSettings (JSONSettings)
 import Common.Network.SiteType (Site)
@@ -40,7 +42,8 @@ import Debug
 fetchLatest :: JSONSettings -> Model -> UTCTime -> Maybe [ Int ] -> IO (Either HttpError [ CatalogPost ])
 fetchLatest settings m t boards = do
     dbg "fetchLatest pre-post"
-    result <- post settings "/rpc/fetch_catalog2" payload False >>= return . eitherDecodeResponse
+    result <- post settings "/rpc/fetch_catalog2" payload defaultOptions
+                >>= return . eitherDecodeResponse
     dbg "fetchLatest post-post"
     return result
 
@@ -119,7 +122,8 @@ getAttachmentsByHash settings attachmentHashes = do
 search :: JSONSettings -> String -> IO (Either HttpError [ CatalogPost ])
 search settings query = do
     putStrLn "DataClient.search calling post"
-    post settings "/rpc/search_posts" payload False >>= return . eitherDecodeResponse
+    post settings "/rpc/search_posts" payload defaultOptions
+        >>= return . eitherDecodeResponse
 
     where
         payload = encode SearchPostsArgs

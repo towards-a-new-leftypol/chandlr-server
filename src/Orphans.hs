@@ -41,3 +41,4 @@ instance ToJSON SearchPostsArgs
 instance ToJSON PostPart
 instance ToJSON ParsedURL
 instance ToJSON Client.FetchCatalogArgs
+instance ToJSON DeletePostResults

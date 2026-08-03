@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RecordWildCards #-}
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Redundant bracket" #-}
@@ -10,9 +10,9 @@ module Main where
 
 import System.Exit (exitFailure)
 import Control.Monad.IO.Class (liftIO)
-import Data.Text (Text, pack)
+import Data.Text (Text)
 import qualified Miso as M
-import Miso.String (toMisoString, fromMisoString)
+import Miso.String (toMisoString)
 import Miso.Router (parseURI)
 import Servant.Miso.Html (HTML)
 import Data.Proxy
@@ -59,7 +59,7 @@ import Common.FrontEnd.Types
 import Admin.DeletePostHandler (deletePostHandler)
 import qualified Common.Network.SiteType as Site
 import qualified Common.Network.BoardType as Board
-import Common.Cookies (CookieJar, getBoardIdsFromCookie)
+import Common.Cookies (CookieJar, getBoardIdsFromCookie, WithCookie)
 
 {-
     :Created By:
@@ -87,11 +87,11 @@ type AdminApi
     =  "admin_"
     :> "delete_post"
     :> ReqBody '[JSON] Client.DeleteIllegalPostArgs
-    :> Post '[JSON] [ Site.Site ]
+    :> Post '[JSON] DeletePostResults
 
 type ServerRoutes
     = FE.Route GET_Result
-    :<|> AdminApi
+    :<|> WithCookie AdminApi
 
 type API = StaticRoute :<|> ServerRoutes
 
@@ -108,8 +108,8 @@ handlers settings
 
     where
         deleteHandler
-            | admin settings = deletePostHandler (clientSettings settings)
-            | otherwise = const $ throwError err403
+            | admin settings = deletePostHandler settings
+            | otherwise = const $ const $ throwError err403
             -- this is a shitty attempt at security tbh
             -- the idea is that you launch one server with admin false and
             -- route that to users, and you launch another instance that's
@@ -125,17 +125,6 @@ server settings =
     where
         staticHandler :: Server StaticRoute
         staticHandler = Servant.serveDirectoryFileServer (static_serve_path settings)
-
-
-clientSettings :: JSONSettings -> S.JSONSettings
-clientSettings (JSONSettings {..}) = S.JSONSettings
-    { S.postgrest_url = fromMisoString postgrest_url
-    , S.jwt = pack jwt
-    , S.backup_read_root = undefined
-    , S.media_root_path = fromMisoString media_root_path
-    , S.site_name = undefined
-    , S.site_url = undefined
-    }
 
 
 clientModel :: JSONSettings -> Client.Model

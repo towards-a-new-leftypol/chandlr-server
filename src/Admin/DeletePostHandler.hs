@@ -20,19 +20,29 @@ import System.IO (hPutStrLn, stderr)
 import Data.Maybe (fromMaybe)
 import Control.Monad (when, unless)
 import System.Directory (doesDirectoryExist, removeDirectoryRecursive)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
+import qualified Common.Server.JSONSettings as S
+import qualified Common.FrontEnd.JSONSettings as JS
+import Common.FrontEnd.Types (DeletePostResults (..))
 import qualified Common.Network.ClientTypes as Client
 import qualified Network.DataClient as Client
-import Common.Server.JSONSettings (JSONSettings, media_root_path)
 import qualified Common.Network.SiteType as Site
 import qualified Common.Network.BoardType as B
 import qualified Common.Network.ThreadType as T
 import qualified Common.Network.PostType as P
 import qualified Common.AttachmentType as A
+import Common.Cookies (CookieJar (..))
+import Network.SpamNoticer (addToKnownSpam)
 
 
-deletePostHandler :: JSONSettings -> Client.DeleteIllegalPostArgs -> Handler [ Site.Site ]
-deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
+deletePostHandler
+    :: JS.JSONSettings
+    -> Client.DeleteIllegalPostArgs
+    -> Maybe CookieJar
+    -> Handler DeletePostResults
+deletePostHandler jssettings args@(Client.DeleteIllegalPostArgs post_id) mCookieJar = do
     liftIO $ putStrLn ("Hello DeleteIllegalPostArgs " <> show args)
 
     result <- liftIO $ runExceptT $ do
@@ -53,6 +63,9 @@ deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
 
         let threadInfo = concatMap (findThreadInfo settings) postsToDelete
 
+        noticerCounts <- liftIO $
+            addToSpamNoticer jssettings adminName postsToDelete
+
         unless (null threadInfo) $ do
             liftIO $ do
                 putStrLn $ "Deleting " ++ show (length threadInfo) ++ " threads."
@@ -68,11 +81,51 @@ deletePostHandler settings args@(Client.DeleteIllegalPostArgs post_id) = do
         let postIds = concatMap collectPostIds postsToDelete
         _ <- ExceptT $ Client.deletePosts settings postIds
 
-        return postsToDelete
+        return $ DeletePostResults postsToDelete noticerCounts
 
     case result of
         Left e -> throwError $ err500 { errBody = fromString $ show e }
         Right deletedPostInfo -> return deletedPostInfo
+
+    where
+        adminName :: Maybe Text.Text
+        adminName = mCookieJar >>= \mCookie ->
+            case mCookie of
+                (CookieJar cookies) -> Map.lookup "mod" cookies >>= firstPart
+
+        firstPart :: Text.Text -> Maybe Text.Text
+        firstPart s
+            | Text.null s = Nothing
+            | otherwise =
+                let split = Text.splitOn ":" s
+                in case split of
+                    []    -> Nothing
+                    x:_ -> Just x
+
+        settings = JS.clientSettings jssettings
+
+
+-- Returns number of success and failure results obtained from submitting
+-- posts to SpamNoticer
+addToSpamNoticer :: JS.JSONSettings -> Maybe Text.Text -> [ Site.Site ] -> IO (Int, Int)
+addToSpamNoticer jssettings adminName sites = do
+    mapM f sites >>= return . countResults
+
+    where
+        f site =
+            addToKnownSpam
+                jssettings
+                adminName
+                site
+                (map fst $ attachmentPathPairs settings site)
+
+        settings = JS.clientSettings jssettings
+
+        countResults :: [ Either a b ] -> (Int, Int)
+        countResults = foldl' step (0, 0)
+            where
+                step (a, b) (Left  _) = (a, b + 1)
+                step (a, b) (Right _) = (a + 1, b)
 
 
 attachmentsFromSite :: Site.Site -> [ A.Attachment ]
@@ -83,7 +136,7 @@ attachmentsFromSite
     . Site.boards
 
 
-attachmentPathPairs :: JSONSettings -> Site.Site -> [(FilePath, Maybe FilePath)]
+attachmentPathPairs :: S.JSONSettings -> Site.Site -> [(FilePath, Maybe FilePath)]
 attachmentPathPairs settings site =
     [ ( threadDir </> (fileName <.> fileExt)
       , case A.thumb_extension attachment of
@@ -104,7 +157,7 @@ attachmentPathPairs settings site =
     ]
 
     where
-      mediaRoot = media_root_path settings
+        mediaRoot = S.media_root_path settings
 
 
 deleteAttachmentPair :: (FilePath, Maybe FilePath) -> IO ()
@@ -132,7 +185,7 @@ deleteAttachmentPair (mainPath, maybeThumbPath) = do
         putStrLn $ "Deleted " <> p
 
 
-findThreadInfo :: JSONSettings -> Site.Site -> [(FilePath, Integer)]
+findThreadInfo :: S.JSONSettings -> Site.Site -> [(FilePath, Integer)]
 findThreadInfo settings site =
     [ ( threadDir
       , T.thread_id thread
@@ -142,7 +195,7 @@ findThreadInfo settings site =
     , post   <- L.toList (T.posts thread)
     , P.board_post_id post == T.board_thread_id thread  -- OP condition
     , let threadDir =
-            media_root_path settings
+            S.media_root_path settings
                 </> fromMisoString (Site.name site)
                 </> fromMisoString (B.pathpart board)
                 </> show (T.board_thread_id thread)

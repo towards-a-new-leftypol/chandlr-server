@@ -90,7 +90,7 @@ executable chandlr-server
                     Common.Parsing.PostBodyUtils
                     Common.Parsing.PostPartType
                     Common.Parsing.QuoteLinkParser
-                    DataClient
+                    Network.DataClient
                     Common.Server.JSONSettings
                     Common.Component.Search.View
                     Common.FrontEnd.Views
@@ -116,8 +116,13 @@ executable chandlr-server
                     Common.Component.NavigationBar.Action
                     Common.Component.NavigationBar.Model
                     Common.Component.NavigationBar.NavMenu
+                    Common.Component.InfiniteScroll
+                    Common.Component.InfiniteScroll.Action
+                    Common.Component.InfiniteScroll.Model
                     Common.BitField
                     Common.Cookies
+                    Hash
+                    Network.SpamNoticer
 
 
     -- LANGUAGE extensions used by modules in this package.
@@ -155,7 +160,9 @@ executable chandlr-server
                       vector,
                       async,
                       cookie,
-                      integer-conversion
+                      integer-conversion,
+                      crypton,
+                      memory
 
     -- Directories containing source files.
     hs-source-dirs:   src
